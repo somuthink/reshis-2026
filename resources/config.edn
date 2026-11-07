@@ -5,8 +5,12 @@
   #:app.entities{:route #include "entities/route.edn"
                  :forecast #include "entities/forecast.edn"}}
 
+ :scriptorium.eacl.pathom/plugin
+ {:superuser {:type :admin :id "admin"}}
+
  :scriptorium.datahike/conn
- {:store {:backend :memory
+ {:store {:backend :file
+          :path "data/db"
           :id #uuid "2385e499-2aed-44bd-a2a2-7b721d36f3d7"}
   :schema-flexibility :write}
 
