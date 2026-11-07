@@ -1,0 +1,17 @@
+{:scriptorium/system {}
+
+ :scriptorium/registry
+ {:entities
+  #:app.entities{:route #include "entities/route.edn"
+                 :forecast #include "entities/forecast.edn"}}
+
+ :scriptorium.datahike/conn
+ {:store {:backend :memory
+          :id #uuid "2385e499-2aed-44bd-a2a2-7b721d36f3d7"}
+  :schema-flexibility :write}
+
+ :scriptorium.reitit.ring/router {:routes [""]}
+
+ :scriptorium.http-kit/server
+ {:port #or [#env PORT 3000]
+  :handler #ig/ref :scriptorium.reitit.ring/ring-handler}}

@@ -1,0 +1,7 @@
+.cpcache/
+.lsp/
+.nrepl-port
+.clj-kondo
+
+*.sublime-project
+*.sublime-workspace

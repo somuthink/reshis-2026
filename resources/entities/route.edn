@@ -1,0 +1,6 @@
+[:map
+ [:route/id {:identity? true} :string]
+ [:route/origin :string]
+ [:route/destination :string]
+ [:route/base-price :double]
+ [:route/price-sensitivity :double]]
