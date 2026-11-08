@@ -1,6 +1,5 @@
 [:map
  [:forecast/id {:identity? true} :uuid]
- [:forecast/route [:s/ref :route/id]]
  [:forecast/date :string]
  [:forecast/seats :int]
  [:forecast/demand-q10 :double]

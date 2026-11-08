@@ -32,8 +32,8 @@
                     routes))
   (d/transact conn
               (mapv (fn [row]
-                      (merge {:forecast/id (random-uuid)
-                              :forecast/route [:route/id (get row "route")]
+                      (merge {:_route/forecacst [:route/id (get row "route")]
+                              :forecast/id (random-uuid)
                               :forecast/date (get row "date")
                               :forecast/seats (parse-long (get row "seats"))}
                              (into {} (map-indexed (fn [i column]

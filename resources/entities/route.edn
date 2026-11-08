@@ -7,4 +7,6 @@
  [:route/cost-per-passenger :double]
  [:route/price-sensitivity :double]
  [:route/price-min :double]
- [:route/price-max :double]]
+ [:route/price-max :double]
+ [:route/forecasts {:db/isComponent true}
+  [:s/ref :forecast/id]]]
