@@ -1,0 +1,28 @@
+[:map {:stored? false}
+ [:scenario/id {:identity? true} :string]
+ [:scenario/from {:>in [:route/origin-cities]
+                  :>options {:source :route/origin-cities :value :city/id :label :city/name}} [:s/ref :city/id]]
+ [:scenario/to {:>in [:route/destination-cities]
+                :>options {:source :route/destination-cities :value :city/id :label :city/name}} [:s/ref :city/id]]
+ [:scenario/date {:ui/type "date"} :string]
+ [:scenario/price :double]
+ [:scenario/route
+  {:resolve :app.resolvers.scenario/route-selection
+   :in [{:scenario/from [:city/id]} {:scenario/to [:city/id]}]}
+  [:s/ref :route/id]]
+ [:scenario/forecast
+  {:resolve :app.resolvers.scenario/forecast-selection
+   :in [:scenario/date {:scenario/route [:route/id]}]}
+  [:s/ref :forecast/id]]
+ [:scenario/estimate
+  {:resolve :app.scenario/estimate
+   :in [:scenario/date :scenario/price
+        {:scenario/from [:city/id]} {:scenario/to [:city/id]}
+        {:scenario/route [:route/name :route/base-price :route/price-sensitivity]}
+        {:scenario/forecast [:forecast/seats :forecast/demand-q50]}]}
+  :any]
+ [:scenario/>form
+  {:resolve :app.views.scenario/form
+   :in [:scenario/>from :scenario/>to :scenario/>date :scenario/>price]}
+  :hiccup]
+ [:scenario/>result {:resolve :app.views.scenario/result :in [:scenario/estimate]} :hiccup]]

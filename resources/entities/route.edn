@@ -1,7 +1,7 @@
 [:map
  [:route/id {:identity? true} :string]
- [:route/origin :string]
- [:route/destination :string]
+ [:route/origin-city [:s/ref :city/id]]
+ [:route/destination-city [:s/ref :city/id]]
  [:route/name :string]
  [:route/base-price :double]
  [:route/cost-per-passenger :double]
@@ -9,4 +9,11 @@
  [:route/price-min :double]
  [:route/price-max :double]
  [:route/forecasts {:db/isComponent true}
-  [:s/ref :forecast/id]]]
+  [:vector [:s/ref :forecast/id]]]
+ [:route/>view {:resolve :app.views.route/detail
+                :in [:route/id :route/name :route/base-price
+                     :route/cost-per-passenger :route/price-sensitivity
+                     :route/price-min :route/price-max
+                     {:route/forecasts [:forecast/date :forecast/seats
+                                        :forecast/demand-q50 :forecast/>row]}]}
+  :hiccup]]

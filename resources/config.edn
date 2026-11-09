@@ -1,20 +1,29 @@
-{:scriptorium/system {}
+{:scriptorium/system
+ {:extra-resolvers [#ig/ref :app.resolvers.route/resolvers
+                    #ig/ref :app.scenario/mutations]
+  :env {:scriptorium.eacl/subject {:type :admin :id "admin"}}}
+
+ :app.resolvers.route/resolvers {}
+ :app.scenario/mutations {}
 
  :scriptorium/registry
  {:entities
   #:app.entities{:route #include "entities/route.edn"
-                 :forecast #include "entities/forecast.edn"}}
+                 :forecast #include "entities/forecast.edn"
+                 :city #include "entities/city.edn"
+                 :scenario #include "entities/scenario.edn"}}
 
  :scriptorium.eacl.pathom/plugin
  {:superuser {:type :admin :id "admin"}}
 
  :scriptorium.datahike/conn
  {:store {:backend :file
-          :path "data/db"
-          :id #uuid "2385e499-2aed-44bd-a2a2-7b721d36f3d7"}
+          :path "data/routes-db"
+          :id #uuid "f67b64bd-57bb-49fb-a998-3b28530bb800"}
   :schema-flexibility :write}
 
- :scriptorium.reitit.ring/router {:routes [""]}
+ :scriptorium.reitit.ring/router
+ {:routes ["" #include "routes/routes.edn"]}
 
  :scriptorium.http-kit/server
  {:port #or [#env PORT 3000]

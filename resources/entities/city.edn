@@ -1,0 +1,3 @@
+[:map
+ [:city/id {:identity? true} :string]
+ [:city/name :string]]

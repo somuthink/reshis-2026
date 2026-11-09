@@ -1,0 +1,7 @@
+[""
+ ["/" {:get :app.reitit.handlers.html.route/index}]
+ ["/routes"
+  ["" {:get :app.reitit.handlers.html.route/index}]
+  ["/{route/id}"
+   {:parameters {:path [:select-keys :app.entities/route [:route/id]]}
+    :get :app.reitit.handlers.html.route/detail}]]]

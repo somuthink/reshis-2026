@@ -8,4 +8,5 @@
  :aliases {:dev {:extra-paths ["dev"]
                  :extra-deps {integrant/repl {:mvn/version "0.5.1"}
                               nrepl/nrepl {:mvn/version "1.7.0"}}
-                 :main-opts ["-m" "nrepl.cmdline" "--port" "9000" "--interactive"]}}}
+                 :main-opts ["-m" "nrepl.cmdline" "--port" "9000" "--interactive"]}
+        :test {:extra-paths ["test"]}}}

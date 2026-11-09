@@ -10,4 +10,7 @@
  [:forecast/demand-q60 :double]
  [:forecast/demand-q70 :double]
  [:forecast/demand-q80 :double]
- [:forecast/demand-q90 :double]]
+ [:forecast/demand-q90 :double]
+ [:forecast/>row {:resolve :app.views.forecast/row
+                  :in [:forecast/date :forecast/seats :forecast/demand-q50]}
+  :hiccup]]
