@@ -20,17 +20,3 @@
 (defmethod ig/init-key ::mutations [_ _]
   [evaluate])
 
-(defn estimate-sales
-  [median-demand seats base-price sensitivity price]
-  (let [demand (- median-demand (* sensitivity (- price base-price)))]
-    {:demand demand :sales (min (double seats) (max 0.0 demand))}))
-
-(defn estimate
-  [{:scenario/keys [from to date price route forecast]}]
-  (let [{:route/keys [name base-price price-sensitivity]} route
-        {:forecast/keys [seats demand-q50]} forecast]
-    (cond
-      (nil? route) {:error (str "No route exists from " (:city/id from) " to " (:city/id to) ".")}
-      (nil? forecast) {:error (str "No forecast exists for " date " on route " name ".")}
-      :else (merge {:name name :date date :price price :median-demand demand-q50 :seats seats}
-                   (estimate-sales demand-q50 seats base-price price-sensitivity price)))))

@@ -15,11 +15,21 @@
    :in [:scenario/date {:scenario/route [:route/id]}]}
   [:s/ref :forecast/id]]
  [:scenario/estimate
-  {:resolve :app.scenario/estimate
+  {:resolve :app.resolvers.scenario/estimate
    :in [:scenario/date :scenario/price
         {:scenario/from [:city/id]} {:scenario/to [:city/id]}
         {:scenario/route [:route/name :route/base-price :route/price-sensitivity]}
         {:scenario/forecast [:forecast/seats :forecast/demand-q50]}]}
+  :any]
+ [:scenario/distribution
+  {:resolve :app.resolvers.scenario/distribution
+   :in [:scenario/price
+        {:scenario/route [:route/base-price :route/price-sensitivity]}
+        {:scenario/forecast [:forecast/demand-q10 :forecast/demand-q20
+                             :forecast/demand-q30 :forecast/demand-q40
+                             :forecast/demand-q50 :forecast/demand-q60
+                             :forecast/demand-q70 :forecast/demand-q80
+                             :forecast/demand-q90]}]}
   :any]
  [:scenario/>form
   {:resolve :app.views.scenario/form
@@ -27,7 +37,7 @@
   :hiccup]
  [:scenario/>result
   {:resolve :app.views.scenario/result
-   :in [:scenario/estimate
+   :in [:scenario/estimate :scenario/distribution
         {:scenario/route [:route/id
                           {:route/origin-city [:city/>link]}
                           {:route/destination-city [:city/>link]}]}]}

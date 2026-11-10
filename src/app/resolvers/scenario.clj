@@ -24,3 +24,35 @@
             :where [?route :route/id ?route-id]
             [?route :route/forecasts ?forecast] [?forecast :forecast/date ?date]]
           (env->db env) (:route/id route) date))))
+
+(defn- demand-at-price [baseline base-price sensitivity price]
+  (- baseline (* sensitivity (- price base-price))))
+
+(defn estimate-sales
+  [median-demand seats base-price sensitivity price]
+  (let [demand (demand-at-price median-demand base-price sensitivity price)]
+    {:demand demand :sales (min (double seats) (max 0.0 demand))}))
+
+(defn distribution
+  [{:scenario/keys [price route forecast]}]
+  (when (and route forecast)
+    (mapv (fn [[quantile attribute]]
+            {:quantile quantile
+             :demand (demand-at-price (get forecast attribute)
+                                      (:route/base-price route)
+                                      (:route/price-sensitivity route) price)})
+          [[0.1 :forecast/demand-q10] [0.2 :forecast/demand-q20]
+           [0.3 :forecast/demand-q30] [0.4 :forecast/demand-q40]
+           [0.5 :forecast/demand-q50] [0.6 :forecast/demand-q60]
+           [0.7 :forecast/demand-q70] [0.8 :forecast/demand-q80]
+           [0.9 :forecast/demand-q90]])))
+
+(defn estimate
+  [{:scenario/keys [from to date price route forecast]}]
+  (let [{:route/keys [name base-price price-sensitivity]} route
+        {:forecast/keys [seats demand-q50]} forecast]
+    (cond
+      (nil? route) {:error (str "No route exists from " (:city/id from) " to " (:city/id to) ".")}
+      (nil? forecast) {:error (str "No forecast exists for " date " on route " name ".")}
+      :else (merge {:name name :date date :price price :median-demand demand-q50 :seats seats}
+                   (estimate-sales demand-q50 seats base-price price-sensitivity price)))))

@@ -15,20 +15,38 @@
             [app.resolvers.scenario :as resolvers]))
 
 (deftest estimate-sales-applies-price-sensitivity-and-seat-cap
-  (let [estimate #(scenario/estimate-sales 775.0 900 9000.0 0.141 %)]
+  (let [estimate #(resolvers/estimate-sales 775.0 900 9000.0 0.141 %)]
     (is (= {:demand 634.0 :sales 634.0} (estimate 10000.0)))
     (let [{:keys [demand sales]} (estimate 0.0)]
       (is (< (Math/abs (- 2044.0 demand)) 1.0e-9))
       (is (= 900.0 sales)))))
 
 (deftest estimate-sales-clamps-only-sales
-  (let [estimate #(scenario/estimate-sales 10.0 5 100.0 1.0 %)]
+  (let [estimate #(resolvers/estimate-sales 10.0 5 100.0 1.0 %)]
     (is (= {:demand -1.0 :sales 0.0} (estimate 111.0)))
     (is (= {:demand 0.0 :sales 0.0} (estimate 110.0)))
     (is (= {:demand 5.0 :sales 5.0} (estimate 105.0)))
     (is (= {:demand 10.0 :sales 5.0} (estimate 100.0)))
     (is (= {:demand 10.0 :sales 0.0}
-           (scenario/estimate-sales 10.0 0 100.0 1.0 100.0)))))
+           (resolvers/estimate-sales 10.0 0 100.0 1.0 100.0)))))
+
+(deftest distribution-adjusts-all-quantiles-without-sales-clamping
+  (let [route {:route/base-price 100.0 :route/price-sensitivity 2.0}
+        forecast (zipmap [:forecast/demand-q10 :forecast/demand-q20 :forecast/demand-q30
+                          :forecast/demand-q40 :forecast/demand-q50 :forecast/demand-q60
+                          :forecast/demand-q70 :forecast/demand-q80 :forecast/demand-q90]
+                         [0.0 5.0 10.0 15.0 20.0 25.0 30.0 35.0 40.0])
+        input {:scenario/route route :scenario/forecast forecast :scenario/price 105.0}
+        points (resolvers/distribution input)
+        summary (resolvers/estimate-sales 20.0 3 100.0 2.0 105.0)]
+    (is (= [0.1 0.2 0.3 0.4 0.5 0.6 0.7 0.8 0.9] (mapv :quantile points)))
+    (is (= [-10.0 -5.0 0.0 5.0 10.0 15.0 20.0 25.0 30.0] (mapv :demand points)))
+    (is (= (:demand summary) (:demand (nth points 4)) 10.0))
+    (is (= 3.0 (:sales summary)))
+    (is (= [20.0 25.0 30.0 35.0 40.0 45.0 50.0 55.0 60.0]
+           (mapv :demand (resolvers/distribution (assoc input :scenario/price 90.0)))))
+    (is (nil? (resolvers/distribution (assoc input :scenario/forecast nil))))
+    (is (nil? (resolvers/distribution (assoc input :scenario/route nil))))))
 
 (deftest forecast-selection-skips-database-access-without-a-route
   (is (nil?
