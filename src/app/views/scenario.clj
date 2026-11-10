@@ -1,12 +1,13 @@
 (ns app.views.scenario
-  (:require [ring.util.codec :as codec]
+  (:require [jsonista.core :as json]
+            [ring.util.codec :as codec]
             [scriptorium.datastar :as ds]
             [scriptorium.pathom.ui :as ui]))
 
 (defn result
-  [{:scenario/keys [estimate route]}]
+  [{:scenario/keys [id estimate route distribution]}]
   (let [{:keys [error date seats demand sales]} estimate]
-    [:section {:class "border-t border-sky-100 p-5 sm:p-8 lg:border-t-0 lg:border-l" :aria-live "polite"}
+    [:section {:class "min-w-0 border-t border-sky-100 p-5 sm:p-8 lg:border-t-0 lg:border-l" :aria-live "polite"}
      (if error
        [:div {:class "border-l-2 border-amber-600 pl-4"}
         [:h2 {:class "mb-2 text-lg font-medium text-slate-900"} "Прогноз недоступен"]
@@ -32,7 +33,24 @@
           [:dd {:class "font-mono tabular-nums"} (format "%.2f" demand)]]
          [:div {:class "flex items-baseline justify-between gap-4 border-t border-sky-100 py-3 text-base"}
           [:dt {:class "text-slate-600"} "Мест"]
-          [:dd {:class "font-mono tabular-nums"} (str seats)]]]])]))
+          [:dd {:class "font-mono tabular-nums"} (str seats)]]]
+        [:figure {:class "mt-5 border-t border-sky-100 pt-5"}
+         [:h3 {:class "text-base font-medium text-slate-700"} "Распределение спроса"]
+         [:demand-chart {:id (str "demand-chart-" id)
+                         :points (json/write-value-as-string distribution)
+                         :capacity (str seats)
+                         :role "img"
+                         :aria-label (str "Квантили спроса от 10 до 90%. Медиана: "
+                                          (format "%.2f" demand) ". Мест: " seats ".")}]
+         [:figcaption {:class "text-xs leading-relaxed text-slate-500"}
+          "Между соседними квантилями — 10% вероятности. Медиана выделена."]
+         [:table {:class "sr-only"}
+          [:caption "Квантили спроса при выбранной цене"]
+          [:thead [:tr [:th {:scope "col"} "Квантиль"] [:th {:scope "col"} "Спрос"]]]
+          [:tbody
+           (for [{:keys [quantile demand]} distribution]
+             [:tr [:td (str (Math/round (* 100.0 quantile)) "%")]
+              [:td (format "%.2f" demand)]])]]]])]))
 
 (defn form
   [{:scenario/keys [id >from >to >date >price]}]
@@ -40,8 +58,8 @@
    [:header {:class "flex flex-wrap items-baseline gap-x-5 gap-y-1 py-7 text-white"}
     [:p {:class "text-base font-medium text-white/90"} "Решись Авиа"]
     [:h1 {:class "text-2xl font-medium tracking-tight"} "Прогноз продаж"]]
-   [:div {:class "clay-panel grid overflow-hidden lg:grid-cols-2"}
-    [:form (merge {:class "grid content-start gap-5 p-5 sm:p-8"}
+   [:div {:class "clay-panel grid grid-cols-1 overflow-hidden lg:grid-cols-2"}
+    [:form (merge {:class "grid min-w-0 content-start gap-5 p-5 sm:p-8"}
                   (ds/on :submit
                          [{(list 'app.scenario/evaluate {:from '$from :to '$to :date '$date :price '$price})
                            [:scenario/>result]}]
@@ -64,7 +82,7 @@
      [:button {:class "clay-button mt-1 h-14 px-6 text-lg font-medium text-white focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-sky-600"
                :type "submit"}
       "Рассчитать"]]
-    [:section {:class "border-t border-sky-100 p-5 sm:p-8 lg:border-t-0 lg:border-l"
+    [:section {:class "min-w-0 border-t border-sky-100 p-5 sm:p-8 lg:border-t-0 lg:border-l"
                :id (ui/view-id :scenario/>result id) :aria-live "polite"}
      [:h2 {:class "text-base text-slate-500"} "Прогноз продаж"]
      [:p {:class "mt-2 text-5xl text-slate-300"} "—"]]]])

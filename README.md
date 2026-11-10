@@ -32,7 +32,7 @@ The input is `resources/public/css/input.css`; Tailwind scans `src/app` for clas
 
 `src/app/resolvers/route.clj` owns `:route/origin-cities` and `:route/destination-cities`. Optional `:to`/`:from` params filter by the opposite selection. Form submission calls the `app.scenario/evaluate` mutation, which validates form values and returns a transient scenario. It performs no database writes; Pathom resolves the mutation's return join.
 
-Plain `[env entity]` functions in `src/app/resolvers/scenario.clj` select the route by city pair and its forecast by date. Their `:resolve` and `:in` declarations live in `scenario.edn`; Scriptorium generates the Pathom operations and infers their output joins from the reference types. The functions return identity references only; generated Datahike resolvers fetch requested pricing/demand fields. Missing matches become `nil`; the estimate reports unavailable routes/dates without separate error attributes. Ambiguous matches raise a resolver error.
+All scenario read resolvers and calculation helpers live in `src/app/resolvers/scenario.clj`: route selection, forecast selection, estimate, and quantile distribution. `src/app/scenario.clj` contains only the submission mutation and its registration. The resolvers' `:resolve` and `:in` declarations live in `scenario.edn`; Scriptorium generates the Pathom operations and infers reference joins. Selection functions return identity references only; generated Datahike resolvers fetch requested pricing/demand fields. Missing matches become `nil`; the estimate reports unavailable routes/dates without separate error attributes. Ambiguous matches raise a resolver error.
 
 The page bootstraps `{:scenario/id "current"}` and requests `:scenario/>form`. Its `:in` composes four generated field controls. Picker `:>in` dependencies supply the route-option lists only to generated views, never scalar reads. `:>options` describes option source/value/label keys; `:>style` controls visual styling; `:ui/type` selects the native date input. Generic renderers contain no route/scenario logic. A stable container in the form owns the Datastar change request; bubbling events refresh the controls without replacing their parent's handler.
 
@@ -44,7 +44,7 @@ Example HTTP payload:
 {"entity":{},"query":"[{(app.scenario/evaluate {:from \"MOW\" :to \"OVB\" :date \"2026-06-01\" :price 10000}) [:scenario/>result]}]"}
 ```
 
-The result join resolves route → forecast → estimate → view. There is no `:scenario/current` adapter attribute, scenario persistence, custom endpoint, or handwritten JavaScript. `/eql` retains its existing identity-only entity validation. Existing Scriptorium `:where` queries require a stored source entity, so the virtual scenario uses plain lookup functions without changing framework query semantics.
+The result join resolves route → forecast → estimate/distribution → view. There is no `:scenario/current` adapter attribute, scenario persistence, or custom endpoint. `/eql` retains its existing identity-only entity validation. Existing Scriptorium `:where` queries require a stored source entity, so the virtual scenario uses plain lookup functions without changing framework query semantics.
 
 The formula follows the PDF's development case:
 
@@ -53,7 +53,14 @@ demand = median demand - price sensitivity * (ticket price - base price)
 sales  = min(seats, max(0, demand))
 ```
 
-The scenario uses median (`q50`) demand, preserving raw demand and clamping sales only. It does not calculate profit or enforce route price bounds. The Datastar bundle is pinned to RC.7 and loaded from jsDelivr.
+The scenario uses median (`q50`) demand, preserving raw demand and clamping sales only. It does not calculate profit or enforce route price bounds. The chart module imports the combined Datastar + Rocket bundle pinned to v1.0.5 from jsDelivr; there is no separate Datastar script.
+
+### Demand chart
+
+`:scenario/distribution` adjusts all nine baseline quantiles server-side using the same price-response function as the summary. The ECharts plot shows demand against quantile probability, highlights the median, and marks capacity. Demand is not clamped: the chart median matches the summary's raw demand, even when sales are zero or capacity-limited. Discrete quantile points do not imply an exact density or extrapolated tails.
+
+`resources/public/js/demand-chart.js` defines a Rocket component with JSON `points` and numeric `capacity` props. Rocket handles prop decoding, observation, shadow DOM, and lifecycle hooks; `renderOnPropChange: false` preserves ECharts-owned nodes during updates. ECharts 5.5.0 loads lazily from jsDelivr when a chart is mounted. The component resizes with its container and registers observer/chart disposal with Rocket's `cleanup`, including removal by error results. A screen-reader table provides the nine numeric quantiles. Rocket remains beta, so its combined bundle is version-pinned.
+
 
 ## Checks
 
@@ -64,4 +71,4 @@ bb -cp .:test -e "(require 'import-csv-test) (let [r (clojure.test/run-tests 'im
 
 AI assistance: OpenAI Codex (`gpt-6.1-sol`) through omp.
 
-Local demo only: the configured fixed admin subject is shared by requests. Configure authentication and an operation-access policy before hosting; optional charts, registration, and hosting are not implemented.
+Local demo only: the configured fixed admin subject is shared by requests. Configure authentication and an operation-access policy before hosting; optional registration and hosting are not implemented.

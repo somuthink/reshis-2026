@@ -10,8 +10,7 @@
      [:meta {:charset "utf-8"}]
      [:meta {:name "viewport" :content "width=device-width, initial-scale=1"}]
      [:title "Прогноз продаж авиабилетов"]
-     [:script {:type "module"
-               :src "https://cdn.jsdelivr.net/gh/starfederation/datastar@v1.0.0-RC.7/bundles/datastar.js"}]
+     [:script {:type "module" :src "/js/demand-chart.js?v=rocket"}]
      [:link {:rel "stylesheet" :href "/css/app.css"}]]
     [:body view]]))
 
