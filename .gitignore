@@ -1,8 +1,9 @@
 .cpcache/
 .lsp/
-data/db/
+data/
 .nrepl-port
 .clj-kondo
 
+*.DS_Store
 *.sublime-project
 *.sublime-workspace
