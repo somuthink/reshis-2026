@@ -86,6 +86,18 @@
             seed {:scenario/id "current"
                   :scenario/from {:city/id "MOW"} :scenario/to {:city/id "AER"}
                   :scenario/date "2026-12-01" :scenario/price 10000.0}]
+        (testing "city relations follow route direction and include empty collections"
+          (is (= {:city/outgoing-routes #{{:route/id "MOW-AER"} {:route/id "MOW-LED"}}
+                  :city/incoming-routes #{{:route/id "AER-MOW"}}}
+                 (update-vals
+                  (p.eql/process env {:city/id "MOW"}
+                                 [{:city/outgoing-routes [:route/id]}
+                                  {:city/incoming-routes [:route/id]}])
+                  set)))
+          (is (= {:city/outgoing-routes [] :city/incoming-routes []}
+                 (p.eql/process env {:city/id "KZN"}
+                                [{:city/outgoing-routes [:route/id]}
+                                 {:city/incoming-routes [:route/id]}]))))
         (testing "route and forecast references derive from supplied scenario data"
           (is (= {:scenario/route {:route/id "MOW-AER" :route/name "MOW → AER"}
                   :scenario/forecast {:forecast/id forecast-id}

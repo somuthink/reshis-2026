@@ -28,3 +28,10 @@
   {:status 200
    :headers {"Content-Type" "text/html; charset=utf-8"}
    :body (document >view)})
+
+(page/defpage city
+  [request {:city/keys [>view]}]
+  {:city/id (get-in request [:parameters :path :city/id])}
+  {:status 200
+   :headers {"Content-Type" "text/html; charset=utf-8"}
+   :body (document >view)})

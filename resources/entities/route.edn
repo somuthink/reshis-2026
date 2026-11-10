@@ -10,10 +10,14 @@
  [:route/price-max :double]
  [:route/forecasts {:db/isComponent true}
   [:vector [:s/ref :forecast/id]]]
+ [:route/>link {:resolve :app.views.route/link
+                :in [:route/id :route/name]}
+  :hiccup]
  [:route/>view {:resolve :app.views.route/detail
                 :in [:route/id :route/name :route/base-price
                      :route/cost-per-passenger :route/price-sensitivity
                      :route/price-min :route/price-max
-                     {:route/forecasts [:forecast/date :forecast/seats
-                                        :forecast/demand-q50 :forecast/>row]}]}
+                     {:route/origin-city [:city/>link]}
+                     {:route/destination-city [:city/>link]}
+                     {:route/forecasts [:forecast/date :forecast/>row]}]}
   :hiccup]]

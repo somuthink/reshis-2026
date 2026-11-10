@@ -1,10 +1,11 @@
 (ns app.views.scenario
-  (:require [scriptorium.datastar :as ds]
+  (:require [ring.util.codec :as codec]
+            [scriptorium.datastar :as ds]
             [scriptorium.pathom.ui :as ui]))
 
 (defn result
-  [{:scenario/keys [estimate]}]
-  (let [{:keys [error name date seats demand sales]} estimate]
+  [{:scenario/keys [estimate route]}]
+  (let [{:keys [error date seats demand sales]} estimate]
     [:section {:class "border-t border-sky-100 p-5 sm:p-8 lg:border-t-0 lg:border-l" :aria-live "polite"}
      (if error
        [:div {:class "border-l-2 border-amber-600 pl-4"}
@@ -12,8 +13,15 @@
         [:p {:class "text-base leading-relaxed text-slate-600" :role "alert"} error]]
        [:div
         [:div {:class "mb-6 flex flex-wrap items-baseline justify-between gap-2"}
-         [:h2 {:class "text-lg font-medium text-slate-900"} name]
-         [:p {:class "font-mono text-sm text-slate-500"} date]]
+         [:h2 {:class "text-lg font-medium text-slate-900"}
+          (get-in route [:route/origin-city :city/>link])
+          " — "
+          (get-in route [:route/destination-city :city/>link])]
+         [:div {:class "flex items-baseline gap-4 text-sm"}
+          [:p {:class "font-mono text-slate-500"} date]
+          [:a {:href (str "/routes/" (codec/url-encode (:route/id route)))
+               :class "text-sky-700 underline underline-offset-4 hover:text-sky-950 focus-visible:outline-2 focus-visible:outline-offset-4"}
+           "Маршрут"]]]
         [:dl
          [:div {:class "mb-6"}
           [:dt {:class "text-base text-slate-600"} "Прогноз продаж"]

@@ -25,4 +25,10 @@
   {:resolve :app.views.scenario/form
    :in [:scenario/>from :scenario/>to :scenario/>date :scenario/>price]}
   :hiccup]
- [:scenario/>result {:resolve :app.views.scenario/result :in [:scenario/estimate]} :hiccup]]
+ [:scenario/>result
+  {:resolve :app.views.scenario/result
+   :in [:scenario/estimate
+        {:scenario/route [:route/id
+                          {:route/origin-city [:city/>link]}
+                          {:route/destination-city [:city/>link]}]}]}
+  :hiccup]]
