@@ -1,0 +1,71 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Варианты графика спроса</title>
+<style>
+*{box-sizing:border-box}body{margin:0;color:#16384c;font:16px system-ui,sans-serif;background:#dff2ff url('/images/sky.svg') center top/cover no-repeat;min-height:100vh}main{max-width:1280px;margin:auto;padding:28px 24px 60px}header{display:flex;align-items:baseline;gap:24px;flex-wrap:wrap;color:white;margin-bottom:24px}h1{font-size:26px;font-weight:550;letter-spacing:-.6px;margin:0}header a{color:white;text-underline-offset:4px;font-size:15px}.panel{border:1px solid #bfd8e7;border-top-color:#fff;border-radius:22px;background:linear-gradient(150deg,#fff,#eef7fc);box-shadow:inset 0 0 0 4px #ffffffb0,inset 0 -2px 0 #b6ccdb66,0 4px 0 #a6c9df,0 16px 30px -12px #06477340}.controls{padding:24px;display:grid;grid-template-columns:1fr 1fr 1fr;gap:28px;margin-bottom:28px}label{display:block;font-size:14px;color:#456175}output{display:block;font-size:26px;font-weight:550;letter-spacing:-.7px;margin:6px 0 12px;font-variant-numeric:tabular-nums}input[type=range]{width:100%;accent-color:#087dbd;cursor:pointer}input:focus-visible,a:focus-visible{outline:3px solid #075985;outline-offset:4px}.stats{display:flex;gap:32px;align-items:center}.stats span{font-size:13px;color:#456175}.stats strong{display:block;font-size:27px;margin-top:7px;font-variant-numeric:tabular-nums}small{font-size:13px;color:#557286;line-height:1.5}.grid{display:grid;grid-template-columns:1fr 1fr;gap:26px}.card{padding:24px;min-width:0}h2{font-size:19px;font-weight:550;margin:0 0 6px;letter-spacing:-.3px}h2 span{color:#7c96a7;font-size:14px;font-family:monospace;margin-right:10px}p{margin:0;color:#557286;font-size:14px;line-height:1.5}.plot{margin-top:20px;border-radius:16px;border:1px solid #cfdee8;border-bottom-color:#fff;background:linear-gradient(#e9f3f9,#f7fbfe);box-shadow:inset 0 2px 5px #16426012,0 1px 0 white;overflow:hidden}.plot svg{display:block;width:100%;height:auto}svg text{font-family:system-ui,sans-serif;fill:#456175;font-size:14px}svg .value{fill:#12384e;font-weight:600}svg .gridline{stroke:#d2e2ed;stroke-width:1}svg .capacity{stroke:#526b7b;stroke-width:1.5;stroke-dasharray:5 4}svg .dot{fill:url(#blue);stroke:#fff;stroke-width:2;filter:url(#lift)}svg .median{fill:url(#amber);stroke:#fff;stroke-width:2;filter:url(#lift)}.note{margin-top:14px;font-size:13px;min-height:38px}.footer{margin-top:25px;padding:16px 20px;background:#eff8ffdc;border:1px solid #ffffffa0;border-radius:12px;color:#284d65;font-size:13px;line-height:1.6}@media(max-width:850px){.grid{grid-template-columns:1fr}.controls{grid-template-columns:1fr 1fr}.stats{grid-column:1/-1}}@media(max-width:480px){main{padding:20px 12px 40px}.controls{grid-template-columns:1fr;gap:16px;padding:20px}.stats{grid-column:auto}.card{padding:18px}h1{font-size:23px}.grid{gap:22px}}
+</style>
+</head>
+<body>
+<main>
+<header><a href="/">← К приложению</a><h1>Как показать спрос?</h1></header>
+<section class="panel controls" aria-label="Демонстрационные параметры">
+<div><label for="price">Цена билета</label><output id="price-label" for="price"></output><input id="price" type="range" min="5000" max="18000" step="100" value="10000"></div>
+<div><label for="capacity">Мест в самолёте</label><output id="capacity-label" for="capacity"></output><input id="capacity" type="range" min="200" max="1400" step="50" value="900"></div>
+<div class="stats" aria-live="polite"><div><span>Медиана спроса</span><strong id="demand"></strong></div><div><span>Купят</span><strong id="sales"></strong></div></div>
+</section>
+<div class="grid">
+<section class="panel card"><h2><span>01</span>Квантильная шкала</h2><p>Одна шкала. Девять границ. Каждый промежуток — 10%.</p><div class="plot" id="strip"></div><p class="note">Подходит для компактного результата. Крайние отметки — P10 и P90, не минимум и максимум.</p></section>
+<section class="panel card"><h2><span>02</span>Мягкие сегменты</h2><p>Восемь объёмных секций по 10% вероятности.</p><div class="plot" id="segments"></div><p class="note">Ширина секции показывает разброс спроса, а не её вероятность. Золотая отметка — медиана.</p></section>
+<section class="panel card"><h2><span>03</span>Вложенная капсула</h2><p>Узкий центр внутри широкого диапазона.</p><div class="plot" id="capsule"></div><p class="note">Три слоя: центральные 80%, 60% и 20% прогноза. Все девять квантилей отмечены снизу.</p></section>
+<section class="panel card"><h2><span>04</span>Шкала с выносками</h2><p>Три понятных числа, остальные — на шкале.</p><div class="plot" id="callouts"></div><p class="note">P10, медиана и P90 вынесены отдельно. Удобнее читать числа, не разбираясь в осях.</p></section>
+<section class="panel card"><h2><span>05</span>Спрос относительно мест</h2><p>Сразу видно, какая часть диапазона выше вместимости.</p><div class="plot" id="capacity-strip"></div><p class="note">Сиреневая зона — спрос выше количества мест. Её длина не равна вероятности заполнения самолёта.</p></section>
+<section class="panel card"><h2><span>06</span>Вложенные интервалы</h2><p>80%, 60% и 20% прогноза вокруг медианы.</p><div class="plot" id="bands"></div><p class="note">Акцент на неопределённости. Тонкие отметки сохраняют все девять квантилей.</p></section>
+<section class="panel card"><h2><span>07</span>Девять сценариев</h2><p>От пессимистичного к оптимистичному, по строкам.</p><div class="plot" id="rows"></div><p class="note">Самый явный вариант: каждый квантиль подписан отдельно. Числа справа — спрос, не продажи.</p></section>
+<section class="panel card"><h2><span>08</span>Вероятность и спрос</h2><p>Текущий подход, но с мягкими объёмными маркерами.</p><div class="plot" id="cdf"></div><p class="note">P90 означает: в 90% случаев спрос не выше этой отметки. Точки не задают точную плотность.</p></section>
+</div>
+<p class="footer">Демонстрационные данные, не прогноз из базы. Во всех вариантах одни и те же девять квантилей. Базовая цена — 10 000 ₽, чувствительность — 0,141 чел./₽. Спрос не обрезается; продажи ограничены местами. Наведите на маркер, чтобы прочитать квантиль. Выбор варианта здесь не меняет приложение.</p>
+</main>
+<script>
+const baseline=[430,510,570,620,650,700,770,850,980];
+const price=document.querySelector('#price'), capacity=document.querySelector('#capacity');
+const nf=new Intl.NumberFormat('ru-RU',{maximumFractionDigits:1});
+const defs=`<defs><linearGradient id="blue" x2="0" y2="1"><stop stop-color="#60c8ff"/><stop offset="1" stop-color="#0479bc"/></linearGradient><linearGradient id="amber" x2="0" y2="1"><stop stop-color="#f6c77c"/><stop offset="1" stop-color="#b76c1e"/></linearGradient><linearGradient id="rail" x2="0" y2="1"><stop stop-color="#bcdfef"/><stop offset=".5" stop-color="#e1f3fc"/><stop offset="1" stop-color="#a6cfe5"/></linearGradient><filter id="lift" x="-70%" y="-70%" width="240%" height="260%"><feDropShadow dx="0" dy="2" stdDeviation="1.5" flood-color="#315c79" flood-opacity=".25"/></filter></defs>`;
+function text(x,y,s,cls='',anchor='start'){return `<text x="${x}" y="${y}" class="${cls}" text-anchor="${anchor}">${s}</text>`}
+function render(){
+const p=+price.value, seats=+capacity.value, data=baseline.map(v=>v-.141*(p-10000));
+const min=Math.floor(Math.min(0,...data)/100)*100,max=Math.ceil(Math.max(seats,...data)/100)*100;
+const x=v=>54+(v-min)/(max-min)*432;
+const title=i=>`P${(i+1)*10}: в ${(i+1)*10}% случаев спрос не выше ${nf.format(data[i])} чел.`;
+const dot=(i,y,r=6)=>`<circle class="${i===4?'median':'dot'}" style="fill:url(#${i===4?'amber':'blue'});filter:url(#lift)" cx="${x(data[i])}" cy="${y}" r="${r}"><title>${title(i)}</title></circle>`;
+const marker=(top,bottom)=>`<path class="capacity" d="M${x(seats)} ${top}V${bottom}"/>${text(x(seats)-5,top-10,`Мест: ${seats}`,'','end')}`;
+const axis=y=>[0,1,2,3].map(i=>{const v=min+(max-min)*i/3;return `<path class="gridline" d="M${x(v)} ${y-5}v5"/>${text(x(v),y+21,nf.format(Math.round(v)),'','middle')}`}).join('')+text(270,y+44,'Спрос, чел.','','middle');
+const mount=(id,body,height)=>{document.querySelector('#'+id).innerHTML=`<svg viewBox="0 0 540 ${height}" role="img" aria-label="${document.querySelector('#'+id).parentElement.querySelector('h2').textContent}. Медиана ${nf.format(data[4])}, мест ${seats}">${defs}${body}</svg>`.replaceAll('id="',`id="${id}-`).replaceAll('url(#',`url(#${id}-`)};
+document.querySelector('#price-label').textContent=nf.format(p)+' ₽';document.querySelector('#capacity-label').textContent=seats;document.querySelector('#demand').textContent=nf.format(data[4]);document.querySelector('#sales').textContent=nf.format(Math.min(seats,Math.max(0,data[4])));
+let strip=`<rect x="54" y="101" width="432" height="32" rx="16" fill="#d9e8f1" stroke="#bfd1de"/><rect x="${x(data[0])}" y="104" width="${x(data[8])-x(data[0])}" height="26" rx="13" fill="url(#rail)" stroke="#8dbbd3"/>`;
+strip+=data.map((v,i)=>`<path d="M${x(v)} 106v22" stroke="#72a9c6"/>${dot(i,117,i===4?10:4)}`).join('');
+strip+=marker(77,147)+text(x(data[0]),163,'P10','','middle')+text(x(data[8]),163,'P90','','middle')+text(x(data[4]),85,`Медиана ${nf.format(data[4])}`,'value','middle')+axis(187);mount('strip',strip,260);
+let segments=`<rect x="50" y="107" width="440" height="50" rx="19" fill="#d9e8f1" stroke="#c0d4e1"/>`;
+for(let i=0;i<8;i++){const w=Math.max(0,x(data[i+1])-x(data[i])-2);segments+=`<rect x="${x(data[i])+1}" y="112" width="${w}" height="40" rx="${Math.min(9,w/2)}" fill="url(#blue)" stroke="#f4fbff" filter="url(#lift)"><title>10% вероятности между ${nf.format(data[i])} и ${nf.format(data[i+1])} чел.</title></rect>`;if(w>34)segments+=text((x(data[i])+x(data[i+1]))/2,137,'10%','','middle');}
+segments+=data.map((_,i)=>dot(i,132,i===4?12:3)).join('')+marker(50,169)+text(x(data[4]),68,`Медиана ${nf.format(data[4])}`,'value','middle')+axis(190);mount('segments',segments,260);
+let capsule=`<rect x="50" y="96" width="440" height="76" rx="30" fill="#dcebf4" stroke="#c5d8e5"/>`;
+[[0,8,100,66,'url(#rail)'],[1,7,110,46,'url(#blue)'],[3,5,121,24,'url(#rail)']].forEach(([a,b,y,h,fill])=>{const w=x(data[b])-x(data[a]);capsule+=`<rect x="${x(data[a])}" y="${y}" width="${w}" height="${h}" rx="${Math.min(h/2,w/2)}" fill="${fill}" stroke="#ffffffb0" filter="url(#lift)"/>`;});
+capsule+=dot(4,133,12)+data.map((_,i)=>dot(i,190,3)).join('')+marker(50,202)+text(x(data[4]),64,`Медиана ${nf.format(data[4])}`,'value','middle')+axis(216);mount('capsule',capsule,280);
+let callouts=`<rect x="50" y="155" width="440" height="34" rx="17" fill="#dceaf3" stroke="#c4d7e4"/><rect x="${x(data[0])}" y="159" width="${x(data[8])-x(data[0])}" height="26" rx="13" fill="url(#rail)" stroke="#98c4db"/>`;
+[[0,104,'P10'],[4,270,'Медиана'],[8,436,'P90']].forEach(([i,cx,label])=>{callouts+=`<path d="M${cx} 118V134L${x(data[i])} 155" fill="none" stroke="${i===4?'#bc8b48':'#8eb5cb'}"/><rect x="${cx-52}" y="55" width="104" height="63" rx="17" fill="${i===4?'#fff3df':'#f7fcff'}" stroke="#fff" filter="url(#lift)"/>`+text(cx,77,label,'','middle')+text(cx,102,nf.format(data[i]),'value','middle');});
+callouts+=data.map((_,i)=>dot(i,172,i===4?11:4)).join('')+marker(145,202)+axis(222);mount('callouts',callouts,285);
+let zone=`<rect x="50" y="100" width="440" height="62" rx="24" fill="#dcebf4" stroke="#c4d7e4"/><rect x="${x(data[0])}" y="106" width="${x(data[8])-x(data[0])}" height="50" rx="20" fill="url(#rail)" stroke="#fff" filter="url(#lift)"/>`;
+const above=Math.max(data[0],seats);if(above<data[8])zone+=`<rect x="${x(above)}" y="109" width="${x(data[8])-x(above)}" height="44" rx="9" fill="#b9c8ee" stroke="#eef2ff"/>`;
+zone+=data.map((_,i)=>dot(i,131,i===4?12:4)).join('')+marker(50,181)+text(x(data[4]),63,`Медиана ${nf.format(data[4])}`,'value','middle')+text(54,202,'Голубой — до вместимости')+text(54,224,'Сиреневый — выше вместимости')+axis(248);mount('capacity-strip',zone,310);
+let bands='';[[0,8,70,32,'80%'],[1,7,123,32,'60%'],[3,5,176,32,'20%']].forEach(([a,b,y,h,label])=>{bands+=text(16,y+21,label)+`<rect x="${x(data[a])}" y="${y}" width="${x(data[b])-x(data[a])}" height="${h}" rx="12" fill="url(#rail)" stroke="#91bed5" filter="url(#lift)"/><path d="M${x(data[a])+7} ${y+3}H${x(data[b])-7}" stroke="#fff" stroke-opacity=".8"/>`;});
+bands+=`<path d="M${x(data[4])} 62V220" stroke="#a86b28" stroke-width="2"/>`+data.map((_,i)=>dot(i,232,i===4?8:4)).join('')+marker(60,244)+axis(255);mount('bands',bands,320);
+let rows=marker(45,314);data.forEach((v,i)=>{const y=65+i*29;rows+=text(15,y+5,`P${(i+1)*10}`)+`<path d="M54 ${y}H486" stroke="#d2e3ed"/><path d="M${x(0)} ${y}H${x(v)}" stroke="${i===4?'#c68b45':'#91c3dd'}" stroke-width="7" stroke-linecap="round"/>`+dot(i,y,i===4?8:6)+text(523,y+5,nf.format(v),i===4?'value':'','end');});rows+=axis(325);mount('rows',rows,390);
+let cdf='';[0,20,40,60,80,100].forEach(q=>{const y=274-q*2;cdf+=`<path class="gridline" d="M54 ${y}H486"/>`+text(42,y+5,q+'%','','end')});cdf+=marker(70,274)+data.map((_,i)=>dot(i,274-(i+1)*20,i===4?10:7)).join('')+axis(280);mount('cdf',cdf,345);
+console.assert(data.length===9&&Math.abs(data[4]-(650-.141*(p-10000)))<1e-8,'Shared quantiles and median must agree');
+}
+price.addEventListener('input',render);capacity.addEventListener('input',render);render();
+</script>
+</body>
+</html>
