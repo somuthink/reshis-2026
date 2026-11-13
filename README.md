@@ -3,16 +3,22 @@
 ## Run and import
 
 Start with `clojure -M:dev`. In nREPL, evaluate `(require 'user)` and `(integrant.repl/go)` to initialize the database schema. Before importing from another process, evaluate `(integrant.repl/halt)` to release the file database; the nREPL itself stays running.
+The app and importer share the file database at `data/routes-db`.
+
 
 ```sh
 bb import_csv.clj
 # Or use local files:
 bb import_csv.clj routes.csv seasonal_forecast.csv
+# Override only forecasts (keep the default routes source):
+bb import_csv.clj --forecasts-source=../ml/my_forecast.csv
 ```
+
+Default CSV sources live in `import.edn`: routes use the configured GitHub URL, and forecasts use `../ml/my_forecast.csv`. Edit either value without changing code; both accept URLs or local paths. Named options (`--routes-source`, `--forecasts-source`) or positional arguments override the configured defaults. Run the importer from this directory.
 
 The importer creates shared city entities using the route codes (`MOW`, `AER`, etc.), links each route to its origin and destination cities, and imports forecasts. There is no demo/root entity. Re-importing creates new forecast entities; it is not a forecast replacement operation.
 
-Evaluate `(integrant.repl/go)` again, then open `http://localhost:3000/`. Select Москва → Сочи, date `2026-06-01`, and price `10000`: the sample data gives 900 seats and 634 predicted sales. Only five outbound routes from Moscow are provided; unavailable city pairs and dates display an error.
+Evaluate `(integrant.repl/go)` again, then open `http://localhost:3000/`. Select Москва → Сочи, choose an available date, and enter a ticket price. For `seasonal_forecast.csv`, June 1 at `10000` gives 900 seats and 634 predicted sales; other imported forecasts can differ. Only five outbound routes from Moscow are provided. The date selector offers only dates present in the selected route's forecasts; direct submissions of unavailable city pairs or dates still display an error.
 
 ### Styles
 

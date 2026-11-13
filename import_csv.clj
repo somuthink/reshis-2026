@@ -1,6 +1,8 @@
 #!/usr/bin/env bb
 (ns import-csv
-  (:require [clojure.data.csv :as csv]
+  (:require [babashka.cli :as cli]
+            [clojure.data.csv :as csv]
+            [clojure.edn :as edn]
             [datahike.pod :as d]
             [clojure.string :as str]))
 
@@ -44,11 +46,9 @@
                 :route/forecasts (mapv forecast (get forecasts route))}))
            routes)]))
 
-(defn -main [& [routes-source forecasts-source]]
-  (let [routes (rows (or routes-source
-                         "https://gist.githubusercontent.com/Murkat-git/3ddc868889d3e0d37542d786c8b1aa74/raw/a934b1220da2b20d7f3eb397a7459fe78ea168ef/routes.csv"))
-        forecasts (rows (or forecasts-source
-                            "https://gist.githubusercontent.com/Murkat-git/3ddc868889d3e0d37542d786c8b1aa74/raw/seasonal_forecast.csv"))
+(defn -main [{:keys [routes-source forecasts-source]}]
+  (let [routes (rows routes-source)
+        forecasts (rows forecasts-source)
         conn (d/connect {:store {:backend :file
                                  :path "data/routes-db"
                                  :id #uuid "f67b64bd-57bb-49fb-a998-3b28530bb800"}
@@ -57,4 +57,9 @@
       (d/transact conn tx))))
 
 (when (= *file* (System/getProperty "babashka.file"))
-  (apply -main *command-line-args*))
+  (-main (merge (edn/read-string (slurp "import.edn"))
+                (cli/parse-opts *command-line-args*
+                                {:spec {:routes-source {:coerce :string}
+                                        :forecasts-source {:coerce :string}}
+                                 :args->opts [:routes-source :forecasts-source]
+                                 :restrict true}))))

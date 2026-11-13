@@ -1,0 +1,2 @@
+{:routes-source "https://gist.githubusercontent.com/Murkat-git/3ddc868889d3e0d37542d786c8b1aa74/raw/a934b1220da2b20d7f3eb397a7459fe78ea168ef/routes.csv"
+ :forecasts-source "../ml/my_forecast.csv"}
