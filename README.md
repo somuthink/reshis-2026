@@ -59,7 +59,7 @@ demand = median demand - price sensitivity * (ticket price - base price)
 sales  = min(seats, max(0, demand))
 ```
 
-The scenario uses median (`q50`) demand, preserving raw demand and clamping sales only. It does not calculate profit or enforce route price bounds. The chart module imports the combined Datastar + Rocket bundle pinned to v1.0.5 from jsDelivr; there is no separate Datastar script.
+The scenario uses median (`q50`) demand, preserving raw demand and clamping sales only. It does not calculate profit or enforce route price bounds. Only the interactive calculator loads the chart module, which imports the combined Datastar + Rocket bundle pinned to v1.0.5 from jsDelivr; there is no separate Datastar script. Read-only city and route pages use native links and load no JavaScript, so their navigation does not wait on the chart module or its CDN.
 
 ### Demand chart
 
