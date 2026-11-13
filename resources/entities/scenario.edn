@@ -4,8 +4,16 @@
                   :>options {:source :route/origin-cities :value :city/id :label :city/name}} [:s/ref :city/id]]
  [:scenario/to {:>in [:route/destination-cities]
                 :>options {:source :route/destination-cities :value :city/id :label :city/name}} [:s/ref :city/id]]
- [:scenario/date {:ui/type "date"} :string]
- [:scenario/price :double]
+ [:scenario/date
+  {:>style :date
+   :>in [:route/forecast-dates]
+   :>options {:source :route/forecast-dates :value :forecast/date}}
+  :time/local-date]
+ [:scenario/price
+  {:>style :slider
+   :>in [{:route/selected [:route/price-min :route/price-max]}]
+   :>options {:source :route/selected :min :route/price-min :max :route/price-max}}
+  :double]
  [:scenario/route
   {:resolve :app.resolvers.scenario/route-selection
    :in [{:scenario/from [:city/id]} {:scenario/to [:city/id]}]}

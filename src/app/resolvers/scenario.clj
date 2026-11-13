@@ -23,7 +23,7 @@
             :in $ ?route-id ?date
             :where [?route :route/id ?route-id]
             [?route :route/forecasts ?forecast] [?forecast :forecast/date ?date]]
-          (env->db env) (:route/id route) date))))
+          (env->db env) (:route/id route) (str date)))))
 
 (defn- demand-at-price [baseline base-price sensitivity price]
   (- baseline (* sensitivity (- price base-price))))
@@ -54,5 +54,5 @@
     (cond
       (nil? route) {:error (str "No route exists from " (:city/id from) " to " (:city/id to) ".")}
       (nil? forecast) {:error (str "No forecast exists for " date " on route " name ".")}
-      :else (merge {:name name :date date :price price :median-demand demand-q50 :seats seats}
+      :else (merge {:name name :date (str date) :price price :median-demand demand-q50 :seats seats}
                    (estimate-sales demand-q50 seats base-price price-sensitivity price)))))

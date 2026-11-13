@@ -7,7 +7,9 @@
 (defn result
   [{:scenario/keys [id estimate route distribution]}]
   (let [{:keys [error date seats demand sales]} estimate]
-    [:section {:class "min-w-0 border-t border-sky-100 p-5 sm:p-8 lg:border-t-0 lg:border-l" :aria-live "polite"}
+    [:section {:class "min-w-0 border-t border-sky-100 p-5 sm:p-8 lg:border-t-0 lg:border-l"
+               :data-show "$from && $to && $date && Number.isFinite($price) && $price >= 0"
+               :aria-live "polite"}
      (if error
        [:div {:class "border-l-2 border-amber-600 pl-4"}
         [:h2 {:class "mb-2 text-lg font-medium text-slate-900"} "Прогноз недоступен"]
@@ -59,29 +61,34 @@
     [:p {:class "text-base font-medium text-white/90"} "Решись Авиа"]
     [:h1 {:class "text-2xl font-medium tracking-tight"} "Прогноз продаж"]]
    [:div {:class "clay-panel grid grid-cols-1 overflow-hidden lg:grid-cols-2"}
-    [:form (merge {:class "grid min-w-0 content-start gap-5 p-5 sm:p-8"}
-                  (ds/on :submit
-                         [{(list 'app.scenario/evaluate {:from '$from :to '$to :date '$date :price '$price})
-                           [:scenario/>result]}]
-                         {}))
+    [:form {:class "grid min-w-0 content-start gap-5 p-5 sm:p-8"
+            :data-on:submit "evt.preventDefault()"
+            :data-on-signal-patch-filter "{include: /^(from|to|date|price)$/}"
+            :data-on-signal-patch__debounce.300ms
+            (str "el.checkValidity() && $from && $to && $date ? "
+                 (get (ds/on :change
+                             [{(list 'app.scenario/evaluate {:from '$from :to '$to :date '$date :price '$price})
+                               [:scenario/>result]}] {})
+                      :data-on:change)
+                 " : null")}
      [:div (merge {:class "grid gap-4 sm:grid-cols-2"}
                   (ds/on :change
                          [(list :route/origin-cities {:to '$to})
                           (list :route/destination-cities {:from '$from})
-                          :scenario/>from :scenario/>to]
+                          (list :route/forecast-dates {:from '$from :to '$to})
+                          :scenario/>from :scenario/>to :scenario/>date :scenario/>price]
                          {:scenario/id id}))
       [:div {:class "grid min-w-0 gap-1.5"}
        [:label {:class "text-base text-slate-600" :for (ui/view-id :scenario/>from id)} "Откуда"] >from]
       [:div {:class "grid min-w-0 gap-1.5"}
        [:label {:class "text-base text-slate-600" :for (ui/view-id :scenario/>to id)} "Куда"] >to]]
-     [:div {:class "grid gap-4 sm:grid-cols-2"}
+     [:div {:class "grid gap-4"}
       [:div {:class "grid min-w-0 gap-1.5"}
-       [:label {:class "text-base text-slate-600" :for (ui/view-id :scenario/>date id)} "Дата"] >date]
+       [:label {:class "text-base text-slate-600" :for (str (ui/view-id :scenario/>date id) "-input")} "Дата"]
+       >date]
       [:div {:class "grid min-w-0 gap-1.5"}
-       [:label {:class "text-base text-slate-600" :for (ui/view-id :scenario/>price id)} "Цена, ₽"] >price]]
-     [:button {:class "clay-button mt-1 h-14 px-6 text-lg font-medium text-white focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-sky-600"
-               :type "submit"}
-      "Рассчитать"]]
+       [:label {:class "text-base text-slate-600" :for (str (ui/view-id :scenario/>price id) "-input")} "Цена, ₽"]
+       >price]]]
     [:section {:class "min-w-0 border-t border-sky-100 p-5 sm:p-8 lg:border-t-0 lg:border-l"
                :id (ui/view-id :scenario/>result id) :aria-live "polite"}
      [:h2 {:class "text-base text-slate-500"} "Прогноз продаж"]

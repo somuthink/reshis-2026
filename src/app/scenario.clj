@@ -13,9 +13,13 @@
                              [:double {:min 0 :max 1.7976931348623157E308}]]]]
    ::pco/output [:scenario/id {:scenario/from [:city/id]}
                  {:scenario/to [:city/id]} :scenario/date :scenario/price]}
-  {:scenario/id "current"
-   :scenario/from {:city/id from} :scenario/to {:city/id to}
-   :scenario/date date :scenario/price price})
+  (let [date (try (java.time.LocalDate/parse date)
+                  (catch java.time.format.DateTimeParseException error
+                    (throw (ex-info "Invalid flight date"
+                                    {:type :error/invalid-expression} error))))]
+    {:scenario/id "current"
+     :scenario/from {:city/id from} :scenario/to {:city/id to}
+     :scenario/date date :scenario/price price}))
 
 (defmethod ig/init-key ::mutations [_ _]
   [evaluate])

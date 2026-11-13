@@ -55,6 +55,16 @@
          (fn [_] (throw (ex-info "Unexpected database access" {})))}
         {:scenario/date "2026-12-01" :scenario/route nil}))))
 
+(deftest slider-route-waits-for-complete-selection
+  (let [env (ig/init-key :scriptorium.pathom.env/env
+                         {:env {:scriptorium.datahike/env->db
+                                (fn [_] (throw (ex-info "Unexpected database access" {})))}
+                          :resolvers [route/forecast-dates]})]
+    (doseq [selection [{} {:from "MOW"} {:to "AER"}]]
+      (is (= {:route/selected nil}
+             (p.eql/process env {}
+                            [{(list :route/selected selection) [:route/id]}]))))))
+
 (deftest scenario-selects-only-matching-routes-and-computes-through-the-registry
   (let [registry (ig/init-key
                   :scriptorium/registry
@@ -88,7 +98,7 @@
                  :scriptorium.pathom.env/env
                  {:env {:scriptorium.datahike/env->db (fn [_] (d/db conn))
                         :com.wsscode.pathom3.error/lenient-mode? false}
-                  :resolvers [scenario/evaluate route/origin-cities route/destination-cities
+                  :resolvers [scenario/evaluate route/origin-cities route/destination-cities route/forecast-dates
                               (views/resolvers {:registry registry})
                               (stored/resolvers {:registry registry})]})
             cities (fn [attribute params]
@@ -96,6 +106,12 @@
                                               [{(if (nil? params) attribute (list attribute params))
                                                 [:city/id :city/name]}])
                                attribute)))
+            dates (fn [parameters]
+                    (mapv :forecast/date
+                          (:route/forecast-dates
+                           (p.eql/process env {}
+                                          [{(list :route/forecast-dates parameters)
+                                            [:forecast/date]}]))))
             scenario (fn [params query]
                        (get (p.eql/process env {} [{(list 'app.scenario/evaluate params) query}])
                             'app.scenario/evaluate))
@@ -103,7 +119,16 @@
             params {:from "MOW" :to "AER" :date "2026-12-01" :price 10000.0}
             seed {:scenario/id "current"
                   :scenario/from {:city/id "MOW"} :scenario/to {:city/id "AER"}
-                  :scenario/date "2026-12-01" :scenario/price 10000.0}]
+                  :scenario/date (java.time.LocalDate/parse "2026-12-01") :scenario/price 10000.0}]
+        (testing "date options are route-specific and do not fill gaps in forecast coverage"
+          (is (= ["2026-12-01" "2026-12-03"] (dates {:from "MOW" :to "AER"})))
+          (is (= ["2026-12-01"] (dates {:from "AER" :to "MOW"})))
+          (doseq [selection [{} {:from "MOW"} {:to "AER"} {:from "" :to "AER"}
+                             {:from "AER" :to "LED"} {:from "MOW" :to "LED"}]]
+            (is (= [] (dates selection)))))
+        (testing "date option params reject wrong types and unknown keys"
+          (doseq [invalid [{:from nil} {:from []} {:to 123} {:unknown "MOW"}]]
+            (is (thrown? clojure.lang.ExceptionInfo (dates invalid)))))
         (testing "city relations follow route direction and include empty collections"
           (is (= {:city/outgoing-routes #{{:route/id "MOW-AER"} {:route/id "MOW-LED"}}
                   :city/incoming-routes #{{:route/id "AER-MOW"}}}
@@ -126,7 +151,7 @@
                                  {:scenario/forecast [:forecast/id]}
                                  :scenario/estimate])))
           (is (= {:scenario/forecast nil}
-                 (p.eql/process env (assoc seed :scenario/date "2026-12-02")
+                 (p.eql/process env (assoc seed :scenario/date (java.time.LocalDate/parse "2026-12-02"))
                                 [{:scenario/forecast [:forecast/id]}]))))
         (testing "global directional variants contain full cities with matching edges only"
           (let [mow {:city/id "MOW" :city/name "Москва"}
@@ -153,7 +178,7 @@
           (is (= {:scenario/id "current"
                   :scenario/from {:city/id "MOW" :city/name "Москва"}
                   :scenario/to {:city/id "AER" :city/name "Сочи"}
-                  :scenario/date "2026-12-01" :scenario/price 10000.0
+                  :scenario/date (java.time.LocalDate/parse "2026-12-01") :scenario/price 10000.0
                   :scenario/route {:route/id "MOW-AER" :route/name "MOW → AER"
                                    :route/base-price 9000.0 :route/price-sensitivity 0.141}
                   :scenario/forecast {:forecast/id forecast-id :forecast/date "2026-12-01"
@@ -184,6 +209,7 @@
         (testing "whole-number prices work and invalid parameters are rejected"
           (is (= 634.0 (:sales (estimate (assoc params :price 10000)))))
           (doseq [invalid [(dissoc params :from) (assoc params :to "")
+                           (assoc params :date "2026-02-30")
                            (assoc params :price -1) (assoc params :price Double/NaN)]]
             (is (thrown? clojure.lang.ExceptionInfo (estimate invalid)))))
         (testing "duplicate forecasts for a date are never selected arbitrarily"
@@ -196,7 +222,8 @@
           (d/transact conn [{:route/id "MOW-AER-SECOND"
                              :route/origin-city [:city/id "MOW"]
                              :route/destination-city [:city/id "AER"]}])
-          (is (thrown? clojure.lang.ExceptionInfo (estimate params)))))
+          (is (thrown? clojure.lang.ExceptionInfo (estimate params)))
+          (is (thrown? clojure.lang.ExceptionInfo (dates {:from "MOW" :to "AER"})))))
       (finally
         (ig/halt-key! :scriptorium.datahike/conn conn)
         (d/delete-database config)))))
