@@ -67,7 +67,7 @@
             :data-on-signal-patch__debounce.300ms
             (str "el.checkValidity() && $from && $to && $date ? "
                  (get (ds/on :change
-                             [{(list 'app.scenario/evaluate {:from '$from :to '$to :date '$date :price '$price})
+                             [{(list 'app.mutations.scenario/evaluate {:from '$from :to '$to :date '$date :price '$price})
                                [:scenario/>result]}] {})
                       :data-on:change)
                  " : null")}

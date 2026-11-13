@@ -1,10 +1,10 @@
 {:scriptorium/system
  {:extra-resolvers [#ig/ref :app.resolvers.route/resolvers
-                    #ig/ref :app.scenario/mutations]
+                    #ig/ref :app.mutations.scenario/mutations]
   :env {:scriptorium.eacl/subject {:type :admin :id "admin"}}}
 
  :app.resolvers.route/resolvers {}
- :app.scenario/mutations {}
+ :app.mutations.scenario/mutations {}
 
  :scriptorium/registry
  {:entities

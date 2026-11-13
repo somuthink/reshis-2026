@@ -1,4 +1,4 @@
-(ns app.scenario
+(ns app.mutations.scenario
   (:require [com.wsscode.pathom3.connect.operation :as pco]
             [integrant.core :as ig]
             [scriptorium.pathom.params :as params]))

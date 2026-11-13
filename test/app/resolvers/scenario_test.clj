@@ -10,7 +10,7 @@
             [scriptorium.pathom.env]
             [scriptorium.pathom.resolvers :as views]
             [scriptorium.datahike.pathom.resolvers :as stored]
-            [app.scenario :as scenario]
+            [app.mutations.scenario :as scenario]
             [app.resolvers.route :as route]
             [app.resolvers.scenario :as resolvers]))
 
@@ -113,8 +113,8 @@
                                           [{(list :route/forecast-dates parameters)
                                             [:forecast/date]}]))))
             scenario (fn [params query]
-                       (get (p.eql/process env {} [{(list 'app.scenario/evaluate params) query}])
-                            'app.scenario/evaluate))
+                       (get (p.eql/process env {} [{(list 'app.mutations.scenario/evaluate params) query}])
+                            'app.mutations.scenario/evaluate))
             estimate (fn [params] (:scenario/estimate (scenario params [:scenario/estimate])))
             params {:from "MOW" :to "AER" :date "2026-12-01" :price 10000.0}
             seed {:scenario/id "current"
