@@ -33,35 +33,21 @@
 
 ## Scriptorium в этом приложении
 
-Malli-описания EDN собираются в реестр схем. Scriptorium преобразует его в схемы сущностей и операции Pathom. При запросе Pathom проходит от требуемого представления страницы к его зависимостям по `:in`, раскрывает ссылки на сущности и получает запрошенные атрибуты. Для полей `:>in` задаёт данные, которые приложение передаёт функции отображения; приложение трактует `:>options` и формирует варианты выбора. Scriptorium не обрабатывает эти настройки списка.
+Scriptorium связывает Malli-схемы с Datahike, вычислениями Pathom и HTML-представлениями. `:in` задаёт зависимости, `:resolve` - функцию расчёта, `:s/ref` - ссылку на сущность. Вложенная выборка EQL задаёт поля связанной сущности.
 
 ### Форма и расчёт сценария
 
-Запрос страницы требует `:scenario/>form`. Его `:in` перечисляет четыре HTML-поля. Например, поле «Откуда» объявляет источник вариантов через `:>in`, а Pathom-резолвер `:scenario/route` объявляет выбранные идентификаторы городов:
+Поле формы описывает источник данных и способ отображения. Например, список городов получает идентификаторы и названия из `:route/origin-cities`:
 
 ```clojure
 [:scenario/from
  {:>label "Откуда"
   :>in [{:route/origin-cities [:city/id :city/name]}]
-  :>options {:source :route/origin-cities
-             :value :city/id
-             :label :city/name}}
+  :>options {:source :route/origin-cities :value :city/id :label :city/name}}
  [:s/ref :city/id]]
-
-[:scenario/route
- {:resolve :app.resolvers.scenario/route-selection
-  :in [{:scenario/from [:city/id]}
-       {:scenario/to [:city/id]}]}
- [:s/ref :route/id]]
-
-[:scenario/>form
- {:resolve :app.views.scenario/form
-  :in [:scenario/>from :scenario/>to
-       :scenario/>date :scenario/>price]}
- :hiccup]
 ```
 
-Стрелки показывают поток данных: источник передаёт атрибут резолверу или view. Верхняя часть графа раскрывает параметры формы, нижняя - значения после изменения пользователем и все атрибуты, запрашиваемые вычислениями и `:scenario/>result`.
+На схеме стрелки ведут от данных к вычислениям и представлениям. Многострочные блоки показывают поля вложенных выборок.
 
 ```mermaid
 flowchart LR
@@ -97,84 +83,43 @@ flowchart LR
   VALUES --> PRICE[":scenario/price"]
   FROM --> ROUTE[":scenario/route"]
   TO --> ROUTE
-  ROUTE --> ROUTE_ID_FOR_FORECAST[":scenario/route join: :route/id"]
+  ROUTE --> ROUTE_ID_FOR_FORECAST["Маршрут для поиска прогноза<br/>:route/id"]
   ROUTE_ID_FOR_FORECAST --> FORECAST[":scenario/forecast"]
   DATE --> FORECAST
-  ROUTE --> EST_ROUTE[":scenario/route join: :route/id, :route/name, :route/base-price, :route/price-sensitivity"]
-  FORECAST --> EST_FORECAST[":scenario/forecast join: :forecast/id, :forecast/seats, :forecast/demand-q50"]
-  FROM --> EST_FROM[":scenario/from join: :city/id"]
-  TO --> EST_TO[":scenario/to join: :city/id"]
+  ROUTE --> EST_ROUTE["Маршрут для расчёта<br/>:route/id, :route/name<br/>:route/base-price<br/>:route/price-sensitivity"]
+  FORECAST --> EST_FORECAST["Прогноз для расчёта<br/>:forecast/id, :forecast/seats<br/>:forecast/demand-q50"]
+  FROM --> EST_FROM["Город отправления<br/>:city/id"]
+  TO --> EST_TO["Город назначения<br/>:city/id"]
   EST_FROM --> ESTIMATE[":scenario/estimate"]
   EST_TO --> ESTIMATE
   DATE --> ESTIMATE
   PRICE --> ESTIMATE
   EST_ROUTE --> ESTIMATE
   EST_FORECAST --> ESTIMATE
-  ROUTE --> DIST_ROUTE[":scenario/route join: :route/id, :route/base-price, :route/price-sensitivity"]
-  FORECAST --> DIST_FORECAST[":scenario/forecast join: :forecast/id, :forecast/demand-q10, :forecast/demand-q20, :forecast/demand-q30, :forecast/demand-q40, :forecast/demand-q50, :forecast/demand-q60, :forecast/demand-q70, :forecast/demand-q80, :forecast/demand-q90"]
+  ROUTE --> DIST_ROUTE["Маршрут для графика<br/>:route/id, :route/base-price<br/>:route/price-sensitivity"]
+  FORECAST --> DIST_FORECAST["Прогноз для графика<br/>:forecast/id<br/>:forecast/demand-q10 … :forecast/demand-q90"]
   DIST_ROUTE --> DISTRIBUTION[":scenario/distribution"]
   DIST_FORECAST --> DISTRIBUTION
   PRICE --> DISTRIBUTION
   ESTIMATE --> RESULT[":scenario/>result"]
   DISTRIBUTION --> RESULT
-  ROUTE --> RESULT_ROUTE[":scenario/route :route/id; {:route/origin-city [:city/>link]}; {:route/destination-city [:city/>link]}"]
-  RESULT_ROUTE --> CITY_LINKS[":city/>link for origin and destination"]
+  ROUTE --> RESULT_ROUTE["Маршрут для результата<br/>:route/id<br/>:route/origin-city → :city/&gt;link<br/>:route/destination-city → :city/&gt;link"]
+  RESULT_ROUTE --> CITY_LINKS["HTML-ссылки на города"]
   CITY_LINKS --> RESULT
 ```
 
-`:scenario/estimate` получает вложенные `{:scenario/from [:city/id]}` и `{:scenario/to [:city/id]}`. Join `:scenario/route` раскрывается до `:route/id`, `:route/name`, `:route/base-price` и `:route/price-sensitivity`; join `:scenario/forecast` - до `:forecast/id`, `:forecast/seats` и `:forecast/demand-q50`. `:scenario/distribution` запрашивает у join маршрута ID, базовую цену и чувствительность, а у join прогноза - все девять квантилей спроса. `:scenario/>result` соединяет оба расчёта с join маршрута, который раскрывает ссылки на города. Следующий граф показывает, из каких атрибутов собирается каждая ссылка.
-
 ### Вложенные страницы маршрута и города
 
-Обработчик маршрута передаёт в Pathom ID из URL и запрашивает `:route/>view`; обработчик города так же запрашивает `:city/>view` по `:city/id`. В `:in` этих view перечислены прямые поля и вложенные join-ы; ниже они показаны до атрибутов, из которых строится каждый Hiccup-узел:
+Обработчик передаёт ID из URL в Pathom. Запрос страницы маршрута включает связанные города и прогнозы:
 
 ```clojure
-[:route/>view
- {:resolve :app.views.route/detail
-  :in [:route/id :route/name :route/base-price
-       :route/cost-per-passenger :route/price-sensitivity
-       :route/price-min :route/price-max
-       {:route/origin-city [:city/>link]}
-       {:route/destination-city [:city/>link]}
-       {:route/forecasts [:forecast/date :forecast/>row]}]}
- :hiccup]
-
-[:city/>link
- {:resolve :app.views.city/link
-  :in [:city/id :city/name]}
- :hiccup]
-
-[:route/>link
- {:resolve :app.views.route/link
-  :in [:route/id :route/name]}
- :hiccup]
-
-[:forecast/>row
- {:resolve :app.views.forecast/row
-  :in [:forecast/date :forecast/seats :forecast/demand-q50]}
- :hiccup]
-
-[:city/>view
- {:resolve :app.views.city/detail
-  :in [:city/id :city/name
-       {:city/outgoing-routes [:route/id :route/name :route/>link]}
-       {:city/incoming-routes [:route/id :route/name :route/>link]}]}
- :hiccup]
-
-[:city/outgoing-routes
- {:resolve :app.resolvers.city/outgoing-routes
-  :in [:city/id]}
- [:vector [:s/ref :route/id]]]
-
-[:city/incoming-routes
- {:resolve :app.resolvers.city/incoming-routes
-  :in [:city/id]}
- [:vector [:s/ref :route/id]]]
+[:route/id :route/name
+ {:route/origin-city [:city/>link]}
+ {:route/destination-city [:city/>link]}
+ {:route/forecasts [:forecast/date :forecast/>row]}]
 ```
 
-В `:route/>view` семь прямых route-полей. Join-ы `:route/origin-city` и `:route/destination-city` следуют по ссылкам `[:s/ref :city/id]`, затем запрашивают `:city/>link`; его `:in` приводит к `:city/id` и `:city/name`. Join `:route/forecasts` проходит по вектору `[:s/ref :forecast/id]`; из каждой forecast-сущности читается `:forecast/date`, а `:forecast/>row` разворачивается в дату, места и медианный спрос.
-
-`:city/>view` запрашивает ID и имя города, а также два маршрутных join-а. Резолверы `:city/outgoing-routes` и `:city/incoming-routes` принимают `:city/id` и возвращают route ID. Каждый результат join раскрывает в `:route/id`, `:route/name` и `:route/>link`; последний строит HTML-ссылку из ID и имени. В графе показаны оба пути до Hiccup-view:
+Pathom раскрывает зависимости представлений до полей сущностей. Проверка EACL ограничивает доступ к данным.
 
 ```mermaid
 flowchart LR
@@ -234,113 +179,68 @@ flowchart LR
   end
 ```
 
-Резолверы прилётов и вылетов фильтруют маршруты по ID города и правам EACL. Остальные листья, например `:city/name` или `:route/name`, Pathom раскрывает по соответствующим схемам и доступным resolver-ам; view-функции получают уже собранные вложенные значения и возвращают Hiccup.
+Резолверы прилётов и вылетов выбирают маршруты по ID города с учётом прав EACL; функции представления получают готовые вложенные данные.
 
 ## Данные и расчёт прогноза
 
-В `deploy/my_forecast.csv` находятся 155 записей для пяти маршрутов из Москвы: MOW-AER, MOW-KGD, MOW-LED, MOW-MRV и MOW-OVB. Даты охватывают период с 1 июня по 1 июля 2026 года включительно. Названия городов, базовые цены и коэффициенты чувствительности поступают из `routes.csv`, адрес которого указан в `import.edn`.
+`deploy/my_forecast.csv` содержит 155 записей для пяти маршрутов из Москвы: MOW-AER, MOW-KGD, MOW-LED, MOW-MRV и MOW-OVB. Период - с 1 июня по 1 июля 2026 года включительно. `routes.csv` задаёт города, базовые цены и чувствительность спроса к цене.
 
-`route` и `date` определяют строку прогноза, `seats` задаёт число кресел. Столбцы от `0.1_base_demand` до `0.9_base_demand` содержат девять квантилей спроса при базовой цене. Квантиль 0,5 - медиана. Импорт связывает эти значения с маршрутом в Datahike.
-
-Расчёт в `src/app/resolvers/scenario.clj` использует формулу задания:
+Сервер выбирает прогноз по `route` и `date`. Расчёт в `src/app/resolvers/scenario.clj`:
 
 ```text
 спрос = 0.5_base_demand − price_sensitivity × (цена − base_price)
 продажи = min(seats, max(0, спрос))
 ```
 
-Тот же сдвиг по цене применяется к каждому из девяти квантилей. Медиана графика совпадает со спросом до ограничения числом мест. На графике отдельно отмечена вместимость самолёта, а таблица значений доступна программам чтения с экрана.
+Каждый из девяти квантилей пересчитывается по той же формуле. Медиана графика совпадает со спросом до ограничения числом кресел; вместимость отмечена отдельно. Пересчёт формы выполняется с задержкой 300 мс, отсутствие маршрута или прогноза возвращает ошибку.
 
-Список доступных дат зависит от маршрута. Цена задаётся числом или ползунком в пределах тарифа; изменение формы пересчитывает результат с задержкой 300 мс. При отсутствии маршрута или прогноза на выбранную дату сервер возвращает сообщение об ошибке.
+Пароли хранятся в виде PBKDF2-SHA256-хэшей; права на маршруты проверяются сервером.
 
-Пароли хранятся в виде PBKDF2-SHA256-хэшей. Пользователь видит только разрешённые маршруты и связанные с ними данные; проверку прав выполняет сервер.
+## Запуск и данные
 
-## Запуск и импорт данных
-
-Исходный запуск использует Java 25 и Clojure CLI; импорт CSV выполняет Babashka с Datahike pod из `bb.edn`. Зависимость Scriptorium задана локальным путём `../../scriptorium` относительно корня приложения. При размещении приложения в `reshis-2026/app` каталог `scriptorium` находится рядом с `reshis-2026`. Dockerfile создаёт эту структуру при сборке.
-
-### Запуск приложения
-
-Команда запуска среды разработки из корня проекта:
+Для исходного запуска нужны Java 25, Clojure CLI и Scriptorium по пути `../../scriptorium` относительно приложения.
 
 ```sh
-clojure -M:dev
+clojure -M -m app.main
+clojure -T:build uber
+java -jar target/reshis-2026.jar
 ```
 
-Инициализация компонентов в nREPL, сетевой среде выполнения Clojure:
+| Переменная | Назначение |
+|---|---|
+| `DATABASE_PATH` | Файловая база, по умолчанию `data/routes-db` |
+| `IP`, `PORT` | Адрес и порт сервера, по умолчанию `0.0.0.0` и `3000` |
+| `PUBLIC_ORIGIN` | Публичный HTTPS-адрес без пути и завершающего `/`; используется для проверки POST-запросов за прокси |
 
-```clojure
-(require 'user)
-(integrant.repl/go)
-```
-
-При инициализации приложение создаёт схему, открывает `data/routes-db` и запускает HTTP-сервер на порту `3000`.
-
-### Запуск без REPL
-
-Для запуска HTTP-сервера напрямую, без nREPL:
+Импорт Babashka выполняется после создания схемы и остановки приложения:
 
 ```sh
-DATABASE_PATH=/path/to/routes-db PORT=3000 clojure -M -m app.main
+bb import_csv.clj
+# Либо с явными источниками:
+bb import_csv.clj routes.csv forecast.csv
 ```
 
-`DATABASE_PATH` и `PORT` можно не задавать: по умолчанию используются `data/routes-db` и порт `3000`.
+Настройки хранятся в `import.edn`; путь прогноза по умолчанию - `../ml/my_forecast.csv`. Повторный импорт добавляет прогнозы, не заменяя прежние записи.
 
-`IP` задаёт адрес HTTP-сервера (по умолчанию `0.0.0.0`). Для Alwaysdata подходит тип сайта User program: приложение использует собственный HTTP-сервер, не Tomcat. Платформа передаёт `IP` и `PORT` через окружение.
-
-### Render / Docker
-
-Dockerfile собирает JAR вместе с закреплённой версией Scriptorium. Конфигурация сервиса Render использует среду Docker, ветку `main`, файл `./Dockerfile` и корневой контекст сборки. Проверка доступности обращается к `/login`. Образ содержит команду запуска; отдельные Docker Command и Pre-Deploy Command не требуются. Render передаёт `PORT`; сервер слушает `0.0.0.0`.
-
-Для HTTPS за обратным прокси параметр `PUBLIC_ORIGIN` содержит публичный адрес сайта со схемой, например `https://reshis-2026-somuthink.onrender.com`, без пути и завершающего `/`. Приложение принимает POST-запросы только с точно совпадающим заголовком `Origin`. Cookie сессии получает атрибут `Secure`, который разрешает браузеру передавать его только по HTTPS. Без настройки сравниваются схема и Host входящего запроса; заголовки `X-Forwarded-*` не считаются доверенными.
-
-Локальная сборка и запуск контейнера:
+### Docker и Render
 
 ```sh
 docker build -t reshis .
 docker run --rm -p 10000:10000 reshis
 ```
 
-Страница входа доступна по адресу `http://localhost:10000/login`.
+Образ содержит JAR и базу с импортированными городами, маршрутами и прогнозами из `deploy/my_forecast.csv`. Локальные пользователи и сценарии в образ не попадают.
 
-При сборке приложение создаёт схему пустой базы, затем `bb import_csv.clj` импортирует города, маршруты и прогнозы. Прогнозы берутся из `deploy/my_forecast.csv` (копия `../ml/my_forecast.csv`), маршруты - по URL из `import.edn`. Готовая база включается в образ без локальных пользователей и сценариев.
+В Render используются `./Dockerfile`, корневой контекст сборки и проверка доступности `/login`. Платформа задаёт `PORT`; `PUBLIC_ORIGIN` содержит `https://reshis-2026-somuthink.onrender.com`.
 
-Render Free не поддерживает постоянные диски: регистрации и другие изменения теряются при перезапуске, развёртывании или засыпании после 15 минут без запросов. После запуска снова доступны исходные импортированные данные.
+Render Free засыпает после 15 минут без запросов и не сохраняет изменения файловой базы при перезапуске. Исходные данные восстанавливаются из образа, новые пользователи и сценарии теряются.
 
-### Импорт CSV
-
-Настройки импорта хранятся в [`import.edn`](import.edn). Источник маршрутов указан как URL, источник прогнозов - `../ml/my_forecast.csv`. Относительные пути разрешаются от корня приложения.
-
-Импорт требует остановленного приложения и свободной файловой базы. Команда остановки компонентов в nREPL:
-
-```clojure
-(integrant.repl/halt)
-```
-
-Команда импорта с настройками из `import.edn`:
-
-```sh
-bb import_csv.clj
-```
-
-Скрипт также принимает два позиционных аргумента - CSV маршрутов и CSV прогнозов. Они заменяют соответствующие значения из `import.edn`:
-
-```sh
-bb import_csv.clj routes.csv forecast.csv
-```
-
-После импорта компоненты запускаются командой `(integrant.repl/go)` в nREPL. Импорт добавляет записи прогнозов и не заменяет ранее загруженные прогнозы.
-
-Источники собственных файлов задаются через `:routes-source` и `:forecasts-source` в `import.edn` либо двумя позиционными аргументами. Путь `../ml/my_forecast.csv` относится к соседнему каталогу ML-блока; файл для Docker-сборки находится отдельно в `deploy/my_forecast.csv`.
-
-## Проверки и сборка
+### Проверки
 
 ```sh
 clojure -M:test -e "(require 'clojure.test 'app.user-test 'app.mutations.user-test 'app.acl-test 'app.resolvers.scenario-test) (let [r (clojure.test/run-tests 'app.user-test 'app.mutations.user-test 'app.acl-test 'app.resolvers.scenario-test)] (System/exit (+ (:fail r) (:error r))))"
 bb -cp .:test -e "(require 'import-csv-test) (let [r (clojure.test/run-tests 'import-csv-test)] (System/exit (+ (:fail r) (:error r))))"
 ```
-
-Команда сборки JAR - `clojure -T:build uber`. Файл `target/reshis-2026.jar` запускается через `java -jar`; адрес базы и порт задаются переменными `DATABASE_PATH` и `PORT`. Перенос `data/routes-db` требует остановки приложения, чтобы файлы базы оставались согласованными.
 
 ## Инструменты разработки
 
