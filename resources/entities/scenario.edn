@@ -1,16 +1,20 @@
 [:map {:stored? false :eacl/resource :app.acl/subject-resource}
  [:scenario/id {:identity? true} :string]
- [:scenario/from {:>in [{:route/origin-cities [:city/id :city/name]}]
+ [:scenario/from {:>label "Откуда"
+                  :>in [{:route/origin-cities [:city/id :city/name]}]
                   :>options {:source :route/origin-cities :value :city/id :label :city/name}} [:s/ref :city/id]]
- [:scenario/to {:>in [{:route/destination-cities [:city/id :city/name]}]
+ [:scenario/to {:>label "Куда"
+                :>in [{:route/destination-cities [:city/id :city/name]}]
                 :>options {:source :route/destination-cities :value :city/id :label :city/name}} [:s/ref :city/id]]
  [:scenario/date
-  {:>style :date
+  {:>label "Дата"
+   :>style :date
    :>in [:route/forecast-dates]
    :>options {:source :route/forecast-dates :value :forecast/date}}
   :time/local-date]
  [:scenario/price
-  {:>style :slider
+  {:>label "Цена, ₽"
+   :>style :slider
    :>in [{:route/selected [:route/price-min :route/price-max]}]
    :>options {:source :route/selected :min :route/price-min :max :route/price-max}}
   :double]

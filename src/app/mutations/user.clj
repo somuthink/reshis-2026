@@ -34,8 +34,8 @@
     (cond-> []
       (or (> (count email) 254) (not (re-matches #"[^\s@]+@[^\s@]+\.[^\s@]+" email)))
       (conj "Укажите корректный адрес электронной почты.")
-      (not (and (string? password) (<= 12 (count password) 256)))
-      (conj "Пароль должен содержать от 12 до 256 символов.")
+      (not (and (string? password) (<= 6 (count password) 256)))
+      (conj "Пароль должен содержать от 6 до 256 символов.")
       (not valid-selection?)
       (conj "Выберите города из списка.")
       (and valid-selection?

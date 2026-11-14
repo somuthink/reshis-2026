@@ -86,27 +86,31 @@
             inputs #(filter (fn [node] (and (vector? node) (= :input (first node))))
                             (tree-seq coll? seq %))
             fields #(into {} (map (fn [[_ attrs]] [(:name attrs) attrs])) (inputs %))
+            labels #(into #{} (keep (fn [node]
+                                      (when (and (vector? node) (= :label (first node)))
+                                        (nth node 2 nil))))
+                          (tree-seq coll? seq %))
             draft {:user/id (str "temp-" (random-uuid)) :user/email ""}
             registration (render env draft :user/>register-form)
             login (render env draft :user/>login-form)
             password (get (fields registration) "user/password")
-            secret "long-enough-password"
+            secret "123456"
             registered (mutations/register env {:email "form@example.test" :password secret :cities ["A" "B"]})
             id (:user/id registered)
             scoped (assoc env :scriptorium.eacl/subject
                           (eacl/resource (:registry (:app.acl/client env)) {:user/id id}))
             account (render scoped {:user/id id} :user/>form)
             account-fields (fields account)]
-        (is (= "" (:value (get (fields registration) "user/email"))))
-        (is (= {:type "password" :value "" :autocomplete "new-password" :minlength 12 :maxlength 256}
+        (is (contains? (labels registration) "Пароль"))
+        (is (= {:type "password" :value "" :autocomplete "new-password" :minlength 6 :maxlength 256}
                (select-keys password [:type :value :autocomplete :minlength :maxlength])))
         (is (= "current-password" (:autocomplete (get (fields login) "user/password"))))
-        (is (nil? (:minlength (get (fields login) "user/password"))))
+        (is (= 6 (:minlength (get (fields login) "user/password"))))
         (is (= #{"A" "B" "C"}
                (into #{} (comp (map second) (filter #(and (= "user/cities" (:name %)) (:checked %)))
                                (map :value)) (inputs registration))))
         (is (= "" (get-in (p.eql/process env (assoc draft :user/password secret) [:user/>password])
-                          [:user/>password 1 :value])))
+                          [:user/>password 3 1 :value])))
         (is (= (str "user-form-" id) (get-in account [1 :id])))
         (is (= "form@example.test" (:value (get account-fields "user/email"))))
         (is (not (contains? account-fields "user/password")))
@@ -251,7 +255,7 @@
         (is (nil? (get-in bad [:headers "Set-Cookie"])))
         (is (str/includes? (:body bad) "auth-result"))
         (is (str/includes? (:body bad) "Укажите корректный адрес электронной почты."))
-        (is (str/includes? (:body bad) "Пароль должен содержать от 12 до 256 символов."))
+        (is (str/includes? (:body bad) "Пароль должен содержать от 6 до 256 символов."))
         (is (not (str/includes? (:body bad) "window.location.assign")))
         (is (empty? (d/q '[:find [?e ...] :where [?e :user/id]] (d/db conn)))))
       (let [start (promise)

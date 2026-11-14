@@ -1,12 +1,13 @@
 [:map
  [:user/id {:identity? true} :string]
  [:user/email {:editable? false :db/unique :db.unique/value
-               :ui/type "email" :ui/attrs {:autocomplete "username" :maxlength 254}
-               :>public? true} :string]
+               :>type "email" :>attrs {:autocomplete "username" :maxlength 254}
+               :>label "Электронная почта" :>public? true} :string]
  [:user/password {:stored? false :>style :password :>public? true
-                  :ui/type "password" :ui/attrs {:maxlength 256 :autocomplete "current-password"}} :string]
+                  :>type "password" :>attrs {:autocomplete "current-password"}
+                  :>label "Пароль"} [:string {:min 6 :max 256}]]
  [:user/password-hash {:readable? false :editable? false} :string]
- [:user/cities {:stored? false :optional true :>public? true :ui/attrs {:aria-describedby "cities-help"}
+ [:user/cities {:stored? false :optional true :>public? true
                 :>in [{:user/registration-cities [:city/id :city/name]}]
                 :>options {:source :user/registration-cities :value :city/id :label :city/name
                            :default-all? true}}

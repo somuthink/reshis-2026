@@ -20,6 +20,7 @@
   (with-redefs [user/cities (fn [_] [{:city/id "A"}])]
     (doseq [params [(assoc valid-params :email [])
                     (assoc valid-params :password nil)
+                    (assoc valid-params :password "12345")
                     (assoc valid-params :cities "A")
                     (assoc valid-params :cities ["unknown"])
                     (assoc valid-params :cities [1])]]

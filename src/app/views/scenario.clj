@@ -78,17 +78,11 @@
                           (list :route/forecast-dates {:from '$from :to '$to})
                           :scenario/>from :scenario/>to :scenario/>date :scenario/>price]
                          {:scenario/id id}))
-      [:div {:class "grid min-w-0 gap-1.5"}
-       [:label {:class "text-base text-slate-600" :for (ui/view-id :scenario/>from id)} "Откуда"] >from]
-      [:div {:class "grid min-w-0 gap-1.5"}
-       [:label {:class "text-base text-slate-600" :for (ui/view-id :scenario/>to id)} "Куда"] >to]]
+      [:div {:class "grid min-w-0 gap-1.5"} >from]
+      [:div {:class "grid min-w-0 gap-1.5"} >to]]
      [:div {:class "grid gap-4"}
-      [:div {:class "grid min-w-0 gap-1.5"}
-       [:label {:class "text-base text-slate-600" :for (str (ui/view-id :scenario/>date id) "-input")} "Дата"]
-       >date]
-      [:div {:class "grid min-w-0 gap-1.5"}
-       [:label {:class "text-base text-slate-600" :for (str (ui/view-id :scenario/>price id) "-input")} "Цена, ₽"]
-       >price]]]
+      [:div {:class "grid min-w-0 gap-1.5"} >date]
+      [:div {:class "grid min-w-0 gap-1.5"} >price]]]
     [:section {:class "min-w-0 border-t border-sky-100 p-5 sm:p-8 lg:border-t-0 lg:border-l"
                :id (ui/view-id :scenario/>result id) :aria-live "polite"}
      [:h2 {:class "text-base text-slate-500"} "Прогноз продаж"]

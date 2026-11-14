@@ -1,8 +1,7 @@
 (ns app.views.user
   (:require [clojure.string :as str]
             [jsonista.core :as json]
-            [scriptorium.datastar :as ds]
-            [scriptorium.pathom.ui :as ui]))
+            [scriptorium.datastar :as ds]))
 
 (defn result [{:user/keys [authenticated? errors]}]
   (let [destination (when-not (seq errors) (if authenticated? "/" "/login"))]
@@ -23,29 +22,24 @@
     [:h1 {:class "text-2xl font-medium text-slate-900"} title]
     content]])
 
-(defn- field [id attribute label view]
-  [:div
-   [:label {:for (ui/view-id attribute id) :class "block font-medium text-slate-800"} label]
-   view])
-
 (defn- submit [label]
   [:button {:type "submit" :class "w-full rounded-xl bg-sky-700 px-5 py-3 font-medium text-white hover:bg-sky-800 focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-sky-600"}
    label])
 
-(defn login-form [{:user/keys [id email >email >password]}]
+(defn login-form [{:user/keys [email >email >password]}]
   (panel email "Вход"
          [:div {:id "auth-result" :role "status" :aria-live "polite"}]
          [:form (merge {:method "post" :action "/eql" :class "mt-6 space-y-5"}
                        (ds/on :submit
                               [{(list 'app.mutations.user/login {:email '$email :password '$password})
                                 [:user/>auth-result]}] {}))
-          (field id :user/>email "Электронная почта" >email)
-          (field id :user/>password "Пароль" >password)
+          >email
+          >password
           (submit "Войти")]
          [:p {:class "mt-6 text-center text-slate-700"} "Нет аккаунта? "
           [:a {:href "/register" :class "text-sky-800 underline underline-offset-4"} "Зарегистрироваться"]]))
 
-(defn register-form [{:user/keys [id email >email >password >cities]}]
+(defn register-form [{:user/keys [email >email >password >cities]}]
   (panel email "Регистрация"
          [:div {:id "auth-result" :role "status" :aria-live "polite"}]
          [:form (merge {:method "post" :action "/eql" :class "mt-6 space-y-5"}
@@ -53,11 +47,10 @@
                               [{(list 'app.mutations.user/register
                                       {:email '$email :password '$password :cities '$cities})
                                 [:user/>auth-result]}] {}))
-          (field id :user/>email "Электронная почта" >email)
-          (field id :user/>password "Пароль"
-                 (update >password 1 assoc :autocomplete "new-password"
-                         :minlength 12 :aria-describedby "password-help"))
-          [:p {:id "password-help" :class "mt-2 text-sm text-slate-600"} "От 12 до 256 символов."]
+          >email
+          (update-in >password [3 1] assoc :autocomplete "new-password"
+                     :aria-describedby "password-help")
+          [:p {:id "password-help" :class "mt-2 text-sm text-slate-600"} "От 6 до 256 символов."]
           [:fieldset
            [:legend {:class "font-medium text-slate-800"} "Доступные города"]
            [:p {:id "cities-help" :class "mt-2 text-sm text-slate-600"}
@@ -67,9 +60,8 @@
          [:p {:class "mt-6 text-center text-slate-700"} "Уже есть аккаунт? "
           [:a {:href "/login" :class "text-sky-800 underline underline-offset-4"} "Войти"]]))
 
-(defn form [{:user/keys [id email >email]}]
+(defn form [{:user/keys [email >email]}]
   (panel email "Аккаунт"
-         [:fieldset {:disabled true :class "mt-6"}
-          (field id :user/>email "Электронная почта" >email)]
+         [:fieldset {:disabled true :class "mt-6"} >email]
          [:p {:class "mt-6 text-center text-slate-700"}
           [:a {:href "/" :class "text-sky-800 underline underline-offset-4"} "Перейти к расчёту"]]))

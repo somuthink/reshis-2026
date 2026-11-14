@@ -40,7 +40,7 @@ The input is `resources/public/css/input.css`; Tailwind scans `src/app` for clas
 
 All scenario read resolvers and calculation helpers live in `src/app/resolvers/scenario.clj`: route selection, forecast selection, estimate, and quantile distribution. `src/app/mutations/scenario.clj` contains only the submission mutation and its registration. The resolvers' `:resolve` and `:in` declarations live in `scenario.edn`; Scriptorium generates the Pathom operations and infers reference joins. Selection functions return identity references only; generated Datahike resolvers fetch requested pricing/demand fields. Missing matches become `nil`; the estimate reports unavailable routes/dates without separate error attributes. Ambiguous matches raise a resolver error.
 
-The page bootstraps `{:scenario/id "current"}` and requests `:scenario/>form`. Its `:in` composes four generated field controls. Picker `:>in` dependencies supply option lists only to generated views, never scalar reads. `:>options` describes option source/value/label keys, with optional `:sort-by`; `:>style` controls visual styling. The date field is disabled until dates are available, and a route change retains the chosen date only if it is still offered. Generic select renderers disable empty lists and synchronize bound values with the available options, without route/scenario-specific logic. A stable container owns the Datastar change request, refreshing city and date controls without replacing the handler.
+The page bootstraps `{:scenario/id "current"}` and requests `:scenario/>form`. Its `:in` composes four generated field controls. `:>in` supplies resolved data only to generated views; each renderer interprets that data itself. `:>options` is renderer-owned configuration for source/value/label keys, with optional `:sort-by`; `:>label` supplies the field label and `:>style` selects a visual renderer. Scriptorium computes field options once and passes them into the renderer with the resolved input. The date field is disabled until dates are available, and a route change retains the chosen date only if it is still offered. Generic select renderers disable empty lists and synchronize bound values with the available options, without route/scenario-specific logic. A stable container owns the Datastar change request, refreshing city and date controls without replacing the handler.
 
 Date uses `:time/local-date` with `:>style :date`. Its renderer directly builds a native `input[type=date]` and previous/next buttons; it does not delegate to a string/select renderer or inspect hidden select markup. Native calendar bounds come from the first/last available dates. Arrows use the supplied dates to skip gaps. Native calendars cannot disable individual interior dates, so unavailable dates fail custom validity and do not trigger automatic calculation. The browser controls date display formatting; values sent to the backend and stored in CSV remain ISO strings. The submission boundary parses a real `java.time.LocalDate` and rejects impossible calendar dates; forecast lookup converts back to ISO for stored data.
 
@@ -74,6 +74,31 @@ The scenario uses median (`q50`) demand, preserving raw demand and clamping sale
 `resources/public/js/demand-chart.js` defines a Rocket component with JSON `points` and numeric `capacity` props. Rocket handles prop decoding, observation, shadow DOM, and lifecycle hooks; `renderOnPropChange: false` preserves ECharts-owned nodes during updates. ECharts 5.5.0 loads lazily from jsDelivr when a chart is mounted. The component resizes with its container and registers observer/chart disposal with Rocket's `cleanup`, including removal by error results. A screen-reader table provides the nine numeric quantiles. Rocket remains beta, so its combined bundle is version-pinned.
 
 
+## Deploy
+
+Build the self-contained application jar on a machine with Clojure CLI and a JDK:
+
+```sh
+clojure -T:build uber
+```
+
+This creates `target/reshis-2026.jar` (about 65 MB); the server needs only a Java runtime, the jar, and its Datahike database. Copy the jar and an existing populated database to the Debian host (the app does not import demo CSVs at startup):
+
+```sh
+mkdir -p /srv/reshis-2026
+scp target/reshis-2026.jar user@host:/srv/reshis-2026/app.jar
+scp -r data/routes-db user@host:/srv/reshis-2026/routes-db
+```
+
+Run from the server with the database at its copied location:
+
+```sh
+cd /srv/reshis-2026
+DATABASE_PATH=/srv/reshis-2026/routes-db PORT=3000 java -jar app.jar
+```
+
+`DATABASE_PATH` defaults to `data/routes-db` relative to the process working directory. Keep that database directory persistent and back it up while the app is stopped. The current session store is in-memory and sessions expire when the JVM restarts. Put the process behind an HTTPS reverse proxy for production; forward the original HTTPS scheme so secure session cookies work.
+
 ## Checks
 
 ```sh
@@ -87,7 +112,7 @@ AI assistance: OpenAI Codex (`gpt-6.1-sol`) through omp.
 
 `/login`, `/register`, and `/account` use `page/defpage`, just like the calculator and route pages. Registration cities come from the public `:user/registration-cities` root resolver. Reads live in `app.resolvers.user`; login, registration, and logout are `app.mutations.user` mutations on the single `/eql`. There is no auth entity, accounts component, or auth-specific endpoint. `:user/password-hash` is declared in `user.edn` with `:readable? false` and `:editable? false`: its DB schema is generated, but graph reads, fields, and generic writes cannot expose or change it. Buddy Hashers derives salted PBKDF2-SHA256 at 600,000 iterations; existing hashes from the earlier encoding remain verifiable. Concurrent duplicate registrations cannot overwrite users.
 
-User EDN declares separate `:user/>login-form`, `:user/>register-form`, and persistent `:user/>form` resolvers. Login/register pages seed a temporary string `:user/id` and empty email for field rendering only; they do not create a database entity. `/account` uses the session's real ID and resolves its email through the protected stored-data resolver. Generated `:user/>email`, `:user/>password`, and option-backed `:user/>cities` fields compose the forms. The password field renderer never echoes a value; registration only adjusts the generated control's new-password autocomplete and length hint. `:user/password` and demo `:user/cities` are attribute-level `:stored? false`, excluded from DB schema, generated reads, and generic writes. There are no explicit password-view resolvers, manual password-hash schema transactions, or form-mode attribute.
+User EDN declares separate `:user/>login-form`, `:user/>register-form`, and persistent `:user/>form` resolvers. Login/register pages seed a temporary string `:user/id` and empty email for field rendering only; they do not create a database entity. `/account` uses the session's real ID and resolves its email through the protected stored-data resolver. Generated `:user/>email`, `:user/>password`, and option-backed `:user/>cities` fields compose the forms. Field labels live in the generated field renderer; the password renderer never echoes a value. Its Malli string bounds (`:min 6`, `:max 256`) drive both the input's `minlength`/`maxlength` and registration validation. Registration overrides only the generated control's new-password autocomplete. `:user/password` and demo `:user/cities` are attribute-level `:stored? false`, excluded from DB schema, generated reads, and generic writes. There are no explicit password-view resolvers, manual password-hash schema transactions, or form-mode attribute.
 
 User mutations return `:user/authenticated?`, `:user/errors`, and the user identity on successful login/registration. They neither import views nor return Hiccup/view attributes. The caller requests `:user/>auth-result` in the mutation return join. Its EDN declaration supplies `:in [:user/authenticated? :user/errors]`, `:entity-input? false`, and `:scriptorium/public? true`: anonymous failures render from transient result data without an invented user identity or persisted feedback fields.
 
@@ -103,4 +128,4 @@ Ordinary Ring `wrap-session` owns server-side memory sessions and cookies. Sessi
 
 Mutations attach server-only response transformations with `scriptorium.reitit.eql/augment-response`, following Fulcro's response augmentation model. The shared endpoint applies them only after the complete query succeeds and returns an ordinary finite SSE Ring response, so standard session middleware can set cookies before headers are sent. Session state is not graph output; there are no request-local session callbacks or manual session finalizers. Virtual `scenario/current` uses the authenticated user's ACL resource, while selected route/forecast data retains its own authorization.
 
-Demo scope: self-assigned grants are not administrator-controlled authorization. No password recovery, email verification, rate limiting, persistent session store, or deployment setup is included. User creation and grant assignment are separate writes: a grant failure leaves a registered user without grants and does not issue a session.
+Demo scope: self-assigned grants are not administrator-controlled authorization. No password recovery, email verification, rate limiting, or persistent session store is included. User creation and grant assignment are separate writes: a grant failure leaves a registered user without grants and does not issue a session.
