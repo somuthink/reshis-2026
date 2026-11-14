@@ -26,4 +26,4 @@ bb -cp .:test -e "(require 'import-csv-test) (let [r (clojure.test/run-tests 'im
 
 Сборка: `clojure -T:build uber`. Для запуска JAR задайте `DATABASE_PATH` и `PORT`; данные приложения хранятся в Datahike. Перед переносом базы остановите сервер и скопируйте каталог `data/routes-db`.
 
-Кейс разработан с помощью OpenAI Codex (`gpt-6.1-sol`).
+Для разработки использовались Oh My Pi, brepl, ast-edit и режим ponytail. Основная модель - Luna; GPT-6-sol выступал советником.
