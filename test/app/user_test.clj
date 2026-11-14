@@ -189,8 +189,26 @@
        "long-enough-password"
        "pbkdf2-sha256$600000$Js9orPHK2hL3gdyRR66yMQ==$Jt5mkBLX98b/Zamw9JZJganxqD2fA26DOnz5fTuFqtM="))
   (doseq [origin [nil "null" "https://evil.test" "https://app.test.evil.test" "http://app.test" "https://app.test/"]]
-    (is (not (middleware/same-origin? {:scheme :https :headers {"host" "app.test" "origin" origin}}))))
-  (is (middleware/same-origin? {:scheme :https :headers {"host" "app.test:8443" "origin" "https://app.test:8443"}})))
+    (is (not (middleware/same-origin? {:scheme :https :headers {"host" "app.test" "origin" origin}} nil))))
+  (is (middleware/same-origin? {:scheme :https :headers {"host" "app.test:8443" "origin" "https://app.test:8443"}} nil)))
+
+(deftest public-origin-behind-https-proxy
+  (with-redefs [user/by-id (constantly nil)]
+    (let [handler (ig/init-key :app.reitit.middleware/handler
+                               {:public-origin "https://app.test"
+                                :handler (fn [_] {:status 200 :body "accepted"
+                                                  :session {:probe true}})})
+          request {:request-method :post :uri "/eql" :scheme :http
+                   :headers {"host" "internal:10000" "origin" "https://app.test"}}
+          response (handler request)]
+      (is (= 200 (:status response)))
+      (is (some #(str/includes? % "Secure") (get-in response [:headers "Set-Cookie"])))
+      (doseq [origin [nil "null" "http://app.test" "https://evil.test"
+                      "https://app.test.evil.test" "https://app.test/"]]
+        (is (= 403 (:status (handler (assoc-in request [:headers "origin"] origin))))))
+      (let [handler (ig/init-key :app.reitit.middleware/handler
+                                 {:handler (fn [_] {:status 200})})]
+        (is (= 403 (:status (handler (assoc-in request [:headers "x-forwarded-proto"] "https")))))))))
 
 (deftest registration-sessions-and-revocation
   (with-system

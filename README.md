@@ -271,6 +271,8 @@ DATABASE_PATH=/path/to/routes-db PORT=3000 clojure -M -m app.main
 
 Dockerfile собирает JAR вместе с закреплённой версией Scriptorium. В Render выбери Docker, ветку `main`, путь `./Dockerfile`, контекст и корневую директорию оставь по умолчанию, health check — `/login`. Docker Command и Pre-Deploy Command не нужны. Render передаёт `PORT`; образ слушает `0.0.0.0`.
 
+Для HTTPS за прокси задай `PUBLIC_ORIGIN` равным публичному origin сайта, например `https://reshis-2026-somuthink.onrender.com` (без пути и завершающего `/`). POST-запросы принимаются только с точно совпадающим `Origin`, session cookie получает `Secure`. Без настройки сравниваются схема и Host входящего запроса; `X-Forwarded-*` не доверяются.
+
 Локальная проверка: `docker build -t reshis .`, затем `docker run --rm -p 10000:10000 reshis`. Открой `http://localhost:10000/login`.
 
 При сборке приложение создаёт схему пустой базы, затем `bb import_csv.clj` импортирует города, маршруты и прогнозы. Прогнозы берутся из `deploy/my_forecast.csv` (копия `../ml/my_forecast.csv`), маршруты — по URL из `import.edn`. Готовая база включается в образ без локальных пользователей и сценариев.

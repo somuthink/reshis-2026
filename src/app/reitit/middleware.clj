@@ -7,10 +7,11 @@
             [ring.middleware.session.memory :as memory]
             [scriptorium.eacl :as eacl]))
 
-(defn same-origin? [{:keys [scheme headers]}]
-  (and (#{:http :https} scheme)
-       (seq (get headers "host"))
-       (= (get headers "origin") (str (name scheme) "://" (get headers "host")))))
+(defn same-origin? [{:keys [scheme headers]} public-origin]
+  (let [expected (or public-origin
+                     (when (and (#{:http :https} scheme) (seq (get headers "host")))
+                       (str (name scheme) "://" (get headers "host"))))]
+    (and (some? expected) (= (get headers "origin") expected))))
 
 (defn- asset? [{:keys [uri request-method]}]
   (and (#{:get :head} request-method)
@@ -19,7 +20,7 @@
        (not (str/ends-with? uri "/"))
        (some? (io/resource (str "public" uri)))))
 
-(defn wrap-identity [handler env registry]
+(defn wrap-identity [handler env registry public-origin]
   (fn [request]
     (let [public-asset? (asset? request)
           identity (user/by-id env (get-in request [:session :user/id]))
@@ -32,7 +33,7 @@
                                            (eacl/resource registry identity))))
           response (cond
                      (and (not (#{:get :head :options} (:request-method request)))
-                          (not (same-origin? request)))
+                          (not (same-origin? request public-origin)))
                      {:status 403 :body "Forbidden Origin"}
 
                      (and (nil? identity) (not public-asset?)
@@ -40,12 +41,15 @@
                      {:status 303 :headers {"Location" "/login"} :body ""}
 
                      :else (handler request))]
-      (cond-> (assoc response :session-cookie-attrs {:secure (= :https (:scheme request))})
+      (cond-> (assoc response :session-cookie-attrs
+                     {:secure (if public-origin
+                                (str/starts-with? public-origin "https://")
+                                (= :https (:scheme request)))})
         (not public-asset?) (assoc-in [:headers "Cache-Control"] "no-store")))))
 
-(defmethod ig/init-key ::handler [_ {:keys [handler pathom-env registry]}]
+(defmethod ig/init-key ::handler [_ {:keys [handler pathom-env registry public-origin]}]
   (session/wrap-session
-   (wrap-identity handler pathom-env registry)
+   (wrap-identity handler pathom-env registry public-origin)
    {:store (memory/memory-store)
     :cookie-name "app-session"
     :cookie-attrs {:path "/" :http-only true :same-site :lax}}))

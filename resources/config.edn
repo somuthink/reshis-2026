@@ -17,6 +17,7 @@
  :app.reitit.middleware/handler
  {:handler #ig/ref :scriptorium.reitit.ring/ring-handler
   :pathom-env #ig/ref :scriptorium.pathom.env/env
+  :public-origin #env PUBLIC_ORIGIN
   :registry #ig/ref :scriptorium/registry}
 
  :scriptorium/registry
