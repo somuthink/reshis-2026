@@ -13,9 +13,7 @@
 
 ## Запуск и данные
 
-Запустить приложение: `clojure -M:dev`. В nREPL выполнить `(require 'user)` и `(integrant.repl/go)`.
-
-`bb import_csv.clj` загружает CSV из `import.edn`: маршруты и прогнозы. Чтобы указать свои файлы, передайте пути: `bb import_csv.clj routes.csv forecast.csv`. Для ML-части проекта используйте свой `my_forecast.csv`; если его нет, подойдёт `seasonal_forecast.csv`. Повторный импорт добавляет новые записи прогнозов.
+Запусти `clojure -M:dev`; в nREPL выполни `(require 'user)` и `(integrant.repl/go)`, чтобы создать схему. Перед отдельным импортом останови систему командой `(integrant.repl/halt)`, запусти `bb import_csv.clj`, затем снова выполни `(integrant.repl/go)`. Импорт читает маршруты и прогнозы из `import.edn`; свои CSV можно указать так: `bb import_csv.clj routes.csv forecast.csv`. Для ML-части используй `my_forecast.csv`, а если его нет - `seasonal_forecast.csv`. Повторный импорт добавляет прогнозы, не заменяет старые.
 
 ## Проверки и публикация
 
