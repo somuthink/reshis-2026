@@ -1,8 +1,8 @@
 [:map {:stored? false :eacl/resource :app.acl/subject-resource}
  [:scenario/id {:identity? true} :string]
- [:scenario/from {:>in [:route/origin-cities]
+ [:scenario/from {:>in [{:route/origin-cities [:city/id :city/name]}]
                   :>options {:source :route/origin-cities :value :city/id :label :city/name}} [:s/ref :city/id]]
- [:scenario/to {:>in [:route/destination-cities]
+ [:scenario/to {:>in [{:route/destination-cities [:city/id :city/name]}]
                 :>options {:source :route/destination-cities :value :city/id :label :city/name}} [:s/ref :city/id]]
  [:scenario/date
   {:>style :date

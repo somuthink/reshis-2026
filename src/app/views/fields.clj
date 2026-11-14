@@ -86,7 +86,8 @@
      [:input {:type "range" :min (or minimum 0) :max (or maximum 1) :step 1
               :disabled (nil? bounds) :aria-label "Ползунок"
               :class "price-slider"
-              :data-effect (str "el.value = " signal)
+              :data-effect (str "el.min = " (or minimum 0) "; el.max = " (or maximum 1)
+                                "; el.value = " signal)
               :data-on:input (str signal " = Number(el.value)")}]
      (when bounds
        [:div {:class "flex justify-between text-sm text-slate-500 tabular-nums"}
