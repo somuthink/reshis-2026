@@ -24,9 +24,7 @@
                   app.reitit.handlers.html.user
                   scriptorium.system
                   scriptorium.registry
-                  scriptorium.datahike.conn
-                  scriptorium.datahike.transaction
-                  scriptorium.datahike.env
+                  scriptorium.datahike
                   scriptorium.datahike.pathom.resolvers
                   scriptorium.datahike.pathom.mutations
                   scriptorium.eacl
