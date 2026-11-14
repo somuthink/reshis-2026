@@ -38,4 +38,5 @@
 
  :scriptorium.http-kit/server
  {:port #long #or [#env PORT 3000]
+  :ip #or [#env IP "0.0.0.0"]
   :handler #ig/ref :app.reitit.middleware/handler}}
