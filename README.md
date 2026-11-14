@@ -26,4 +26,4 @@ bb -cp .:test -e "(require 'import-csv-test) (let [r (clojure.test/run-tests 'im
 
 Сборка: `clojure -T:build uber`. Для запуска JAR задайте `DATABASE_PATH` и `PORT`; данные приложения хранятся в Datahike. Перед переносом базы остановите сервер и скопируйте каталог `data/routes-db`.
 
-Для разработки использовались Oh My Pi, brepl, ast-edit и режим ponytail. Основная модель - Luna; GPT-6-sol выступал советником.
+Код писали в Sublime Text с Clojure Sublimed и в Neovim с Conjure. Oh My Pi был рабочей средой; brepl подключал проект к nREPL, ast-edit редактировал код по структуре, а ponytail помогал держать изменения небольшими. Основной моделью была Luna, GPT-6-sol использовался как советник.
