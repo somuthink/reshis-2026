@@ -5,9 +5,10 @@
             [scriptorium.registry :as registry]))
 
 (defn- attributes [registry attribute]
-  (let [{:keys [name required? disabled?]} (ui/field-options registry attribute nil)]
-    {:class "field-control" :name name :required required? :disabled disabled?
-     (keyword (str "data-bind:" (clojure.core/name attribute))) true}))
+  (let [{:keys [name required? disabled? input-attrs]} (ui/field-options registry attribute nil)]
+    (merge input-attrs
+           {:class "field-control" :name name :required required? :disabled disabled?
+            (keyword (str "data-bind:" (clojure.core/name attribute))) true})))
 
 (defn- input-id [registry attribute input]
   (str (ui/view-id (keyword (namespace attribute) (str ">" (name attribute)))
@@ -33,6 +34,33 @@
                      :selected (= value ((:value options) option))}
             ((:label options) option)])])
       [:input (assoc (attributes registry attribute) :type (or input-type "text") :value (or value ""))])))
+
+(defmethod ui/render-field [:string :password]
+  [registry attribute _ input]
+  ((get-method ui/render-field [:string :default]) registry attribute nil input))
+
+(defmethod ui/render-field [:vector :default]
+  [registry attribute value input]
+  (let [{:keys [options name input-attrs]} (ui/field-options registry attribute value)
+        choices (sort-by (:label options) (get input (:source options)))
+        selected (if (and (nil? value) (:default-all? options)) choices value)
+        selected-ids (mapv (:value options) selected)
+        selected? (set selected-ids)
+        signal (str "$" (clojure.core/name attribute))]
+    [:div {:class "mt-3 grid gap-3 sm:grid-cols-2"
+           :data-signals (str/replace
+                          (json/write-value-as-string {(keyword (clojure.core/name attribute)) selected-ids})
+                          #"[$@]" {"$" "\\u0024" "@" "\\u0040"})}
+     (for [choice choices
+           :let [id ((:value options) choice)]]
+       [:label {:class "flex items-center gap-3 text-slate-800"}
+        [:input (merge input-attrs
+                       {:type "checkbox" :name name :value id :checked (contains? selected? id)
+                        :class "h-5 w-5 accent-sky-600"
+                        :data-on:change (str signal " = Array.from(el.form.querySelectorAll("
+                                             (json/write-value-as-string (str "input[name=\"" name "\"]:checked"))
+                                             "), input => input.value)")})]
+        [:span ((:label options) choice)]])]))
 
 (defmethod ui/render-field [:s/ref :default]
   [registry attribute value input]

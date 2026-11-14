@@ -1,4 +1,7 @@
 [""
+ ["/login" {:get :app.reitit.handlers.html.user/login}]
+ ["/register" {:get :app.reitit.handlers.html.user/register}]
+ ["/account" {:get :app.reitit.handlers.html.user/account}]
  ["/" {:get :app.reitit.handlers.html.route/index}]
  ["/routes"
   ["" {:get :app.reitit.handlers.html.route/index}]

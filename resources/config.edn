@@ -1,20 +1,31 @@
 {:scriptorium/system
  {:extra-resolvers [#ig/ref :app.resolvers.route/resolvers
-                    #ig/ref :app.mutations.scenario/mutations]
-  :env {:scriptorium.eacl/subject {:type :admin :id "admin"}}}
+                    #ig/ref :app.mutations.scenario/mutations
+                    #ig/ref :app.mutations.user/mutations
+                    #ig/ref :app.resolvers.user/resolvers]
+  :env {:app.acl/client #ig/ref :scriptorium.eacl/client}}
 
  :app.resolvers.route/resolvers {}
  :app.mutations.scenario/mutations {}
+ :app.mutations.user/mutations {}
+ :app.resolvers.user/resolvers {}
+
+ :scriptorium.eacl/client
+ {:extra-relations [{:relation :viewer :subject-type :user :resource-type :route}
+                    {:relation :viewer :subject-type :user :resource-type :city}]}
+
+ :app.reitit.middleware/handler
+ {:handler #ig/ref :scriptorium.reitit.ring/ring-handler
+  :pathom-env #ig/ref :scriptorium.pathom.env/env
+  :registry #ig/ref :scriptorium/registry}
 
  :scriptorium/registry
  {:entities
   #:app.entities{:route #include "entities/route.edn"
                  :forecast #include "entities/forecast.edn"
                  :city #include "entities/city.edn"
-                 :scenario #include "entities/scenario.edn"}}
-
- :scriptorium.eacl.pathom/plugin
- {:superuser {:type :admin :id "admin"}}
+                 :scenario #include "entities/scenario.edn"
+                 :user #include "entities/user.edn"}}
 
  :scriptorium.datahike/conn
  {:store {:backend :file
@@ -27,4 +38,4 @@
 
  :scriptorium.http-kit/server
  {:port #or [#env PORT 3000]
-  :handler #ig/ref :scriptorium.reitit.ring/ring-handler}}
+  :handler #ig/ref :app.reitit.middleware/handler}}

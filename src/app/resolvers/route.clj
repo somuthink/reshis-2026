@@ -1,37 +1,53 @@
 (ns app.resolvers.route
-  (:require [app.resolvers.scenario :as scenario]
+  (:require [app.acl :as acl]
+            [app.resolvers.scenario :as scenario]
             [com.wsscode.pathom3.connect.operation :as pco]
+            [eacl.core :as eacl]
+            [eacl.datahike.core :as eacl.datahike]
             [datahike.api :as d]
             [integrant.core :as ig]
+            [scriptorium.eacl :as se]
             [scriptorium.pathom.params :as params]))
 
-(defn- route-cities [db city-attribute other-attribute code]
-  (d/q {:find '[[(pull ?city [:city/id :city/name]) ...]]
-        :in '[$ ?city-attribute ?other-attribute ?code]
-        :where (cond-> '[[?route ?city-attribute ?city]]
-                 (seq code) (into '[[?route ?other-attribute ?other]
-                                    [?other :city/id ?code]]))}
-       db city-attribute other-attribute (or code "")))
+(defn- route-cities
+  [env city-attribute other-attribute code]
+  (eacl/with-snapshot [snapshot (eacl/snapshot (get-in env [:app.acl/client :client]))]
+    (d/q {:find '[[(pull ?city [:city/id]) ...]]
+          :in '[$ [?route-id ...] ?city-attribute ?other-attribute ?code]
+          :where (cond-> '[[?route :route/id ?route-id]
+                           [?route ?city-attribute ?city]]
+                   (seq code) (into '[[?route ?other-attribute ?other]
+                                      [?other :city/id ?code]]))}
+         (eacl.datahike/db snapshot)
+         (se/lookup-resource-ids snapshot {:subject (acl/subject-resource env nil)
+                                           :permission :view :resource/type :route})
+         city-attribute other-attribute (or code ""))))
 
 (pco/defresolver origin-cities
-  [{:scriptorium.datahike/keys [env->db] :as env} _]
+  [env _]
   {::params/schema [:map {:closed true} [:to {:optional true} :string]]
-   ::pco/output [{:route/origin-cities [:city/id :city/name]}]}
+   :eacl/permission :view
+   :eacl/resource acl/subject-resource
+   ::pco/output [{:route/origin-cities [:city/id]}]}
   (let [{:keys [to]} (pco/params env)]
-    {:route/origin-cities (route-cities (env->db env) :route/origin-city :route/destination-city to)}))
+    {:route/origin-cities (route-cities env :route/origin-city :route/destination-city to)}))
 
 (pco/defresolver destination-cities
-  [{:scriptorium.datahike/keys [env->db] :as env} _]
+  [env _]
   {::params/schema [:map {:closed true} [:from {:optional true} :string]]
-   ::pco/output [{:route/destination-cities [:city/id :city/name]}]}
+   :eacl/permission :view
+   :eacl/resource acl/subject-resource
+   ::pco/output [{:route/destination-cities [:city/id]}]}
   (let [{:keys [from]} (pco/params env)]
-    {:route/destination-cities (route-cities (env->db env) :route/destination-city :route/origin-city from)}))
+    {:route/destination-cities (route-cities env :route/destination-city :route/origin-city from)}))
 
 (pco/defresolver forecast-dates
   [{:scriptorium.datahike/keys [env->db] :as env} _]
   {::params/schema [:map {:closed true}
                     [:from {:optional true} :string]
                     [:to {:optional true} :string]]
+   :eacl/permission :view
+   :eacl/resource acl/subject-resource
    ::pco/output [{:route/forecast-dates [:forecast/date]}
                  {:route/selected [:route/id]}]}
   (let [{:keys [from to]} (pco/params env)

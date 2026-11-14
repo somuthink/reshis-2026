@@ -5,11 +5,15 @@
             [com.wsscode.pathom3.interface.eql :as p.eql]
             [datahike.api :as d]
             [integrant.core :as ig]
+            [scriptorium.datahike :as sd]
+            [scriptorium.eacl :as acl]
+            [scriptorium.eacl.pathom :as acl.pathom]
             [scriptorium.registry]
             [scriptorium.datahike.conn]
             [scriptorium.pathom.env]
             [scriptorium.pathom.resolvers :as views]
             [scriptorium.datahike.pathom.resolvers :as stored]
+            [app.acl :as app-acl]
             [app.mutations.scenario :as scenario]
             [app.resolvers.route :as route]
             [app.resolvers.scenario :as resolvers]))
@@ -68,36 +72,49 @@
 (deftest scenario-selects-only-matching-routes-and-computes-through-the-registry
   (let [registry (ig/init-key
                   :scriptorium/registry
-                  {:entities (into {} (for [entity ["city" "route" "forecast" "scenario"]]
+                  {:entities (into {} (for [entity ["user" "city" "route" "forecast" "scenario"]]
                                         [(keyword "app.entities" entity)
                                          (edn/read-string (slurp (io/resource (str "entities/" entity ".edn"))))]))})
         forecast-id (random-uuid)
         config {:store {:backend :memory :id (random-uuid)} :schema-flexibility :write}
-        conn (ig/init-key :scriptorium.datahike/conn (assoc config :registry registry))]
+        conn (ig/init-key :scriptorium.datahike/conn (assoc config :registry registry))
+        client (ig/init-key :scriptorium.eacl/client
+                            {:registry registry :conn conn
+                             :extra-relations [{:relation :viewer :subject-type :user :resource-type :route}
+                                               {:relation :viewer :subject-type :user :resource-type :city}]})
+        transaction (sd/transaction {:conn conn :eacl-client client})]
     (try
-      (d/transact conn [{:city/id "MOW" :city/name "Москва"}
-                        {:city/id "AER" :city/name "Сочи"}
-                        {:city/id "LED" :city/name "Санкт-Петербург"}
-                        {:city/id "KZN" :city/name "Казань"}])
-      (d/transact conn
-                  [{:route/id "MOW-AER" :route/name "MOW → AER"
-                    :route/origin-city [:city/id "MOW"] :route/destination-city [:city/id "AER"]
-                    :route/base-price 9000.0 :route/price-sensitivity 0.141
-                    :route/forecasts [{:forecast/id forecast-id :forecast/date "2026-12-01"
-                                       :forecast/seats 900 :forecast/demand-q50 775.0}
-                                      {:forecast/id (random-uuid) :forecast/date "2026-12-03"}]}
-                   {:route/id "AER-MOW" :route/name "AER → MOW"
-                    :route/origin-city [:city/id "AER"] :route/destination-city [:city/id "MOW"]
-                    :route/base-price 9000.0 :route/price-sensitivity 0.141
-                    :route/forecasts [{:forecast/id (random-uuid) :forecast/date "2026-12-01"
-                                       :forecast/seats 100 :forecast/demand-q50 300.0}]}
+      (transaction [{:city/id "MOW" :city/name "Москва"}
+                    {:city/id "AER" :city/name "Сочи"}
+                    {:city/id "LED" :city/name "Санкт-Петербург"}
+                    {:city/id "KZN" :city/name "Казань"}])
+      (transaction
+       [{:route/id "MOW-AER" :route/name "MOW → AER"
+         :route/origin-city [:city/id "MOW"] :route/destination-city [:city/id "AER"]
+         :route/base-price 9000.0 :route/price-sensitivity 0.141
+         :route/forecasts [{:forecast/id forecast-id :forecast/date "2026-12-01"
+                            :forecast/seats 900 :forecast/demand-q50 775.0}
+                           {:forecast/id (random-uuid) :forecast/date "2026-12-03"}]}
+        {:route/id "AER-MOW" :route/name "AER → MOW"
+         :route/origin-city [:city/id "AER"] :route/destination-city [:city/id "MOW"]
+         :route/base-price 9000.0 :route/price-sensitivity 0.141
+         :route/forecasts [{:forecast/id (random-uuid) :forecast/date "2026-12-01"
+                            :forecast/seats 100 :forecast/demand-q50 300.0}]}
                    ;; Missing calculation data makes accidental loading of unrelated routes fail.
-                   {:route/id "MOW-LED" :route/origin-city [:city/id "MOW"]
-                    :route/destination-city [:city/id "LED"]}])
+        {:route/id "MOW-LED" :route/origin-city [:city/id "MOW"]
+         :route/destination-city [:city/id "LED"]}])
+      (transaction [{:user/id "scenario-test" :user/email "scenario@example.test"}])
+      (app-acl/grant-view!
+       {:app.acl/client client} {:user/id "scenario-test"}
+       [{:city/id "MOW"} {:city/id "AER"} {:city/id "LED"} {:city/id "KZN"}
+        {:route/id "MOW-AER"} {:route/id "AER-MOW"} {:route/id "MOW-LED"}])
       (let [env (ig/init-key
                  :scriptorium.pathom.env/env
                  {:env {:scriptorium.datahike/env->db (fn [_] (d/db conn))
+                        :app.acl/client client
+                        :scriptorium.eacl/subject (acl/resource registry {:user/id "scenario-test"})
                         :com.wsscode.pathom3.error/lenient-mode? false}
+                  :plugins [(acl.pathom/plugin {:client client})]
                   :resolvers [scenario/evaluate route/origin-cities route/destination-cities route/forecast-dates
                               (views/resolvers {:registry registry})
                               (stored/resolvers {:registry registry})]})
@@ -213,15 +230,15 @@
                            (assoc params :price -1) (assoc params :price Double/NaN)]]
             (is (thrown? clojure.lang.ExceptionInfo (estimate invalid)))))
         (testing "duplicate forecasts for a date are never selected arbitrarily"
-          (d/transact conn [{:route/id "MOW-AER"
-                             :route/forecasts [{:forecast/id (random-uuid)
-                                                :forecast/date "2026-12-01"
-                                                :forecast/seats 1 :forecast/demand-q50 1.0}]}])
+          (transaction [{:route/id "MOW-AER"
+                         :route/forecasts [{:forecast/id (random-uuid)
+                                            :forecast/date "2026-12-01"
+                                            :forecast/seats 1 :forecast/demand-q50 1.0}]}])
           (is (thrown? clojure.lang.ExceptionInfo (estimate params))))
         (testing "different route identities with the same endpoints are ambiguous"
-          (d/transact conn [{:route/id "MOW-AER-SECOND"
-                             :route/origin-city [:city/id "MOW"]
-                             :route/destination-city [:city/id "AER"]}])
+          (transaction [{:route/id "MOW-AER-SECOND"
+                         :route/origin-city [:city/id "MOW"]
+                         :route/destination-city [:city/id "AER"]}])
           (is (thrown? clojure.lang.ExceptionInfo (estimate params)))
           (is (thrown? clojure.lang.ExceptionInfo (dates {:from "MOW" :to "AER"})))))
       (finally

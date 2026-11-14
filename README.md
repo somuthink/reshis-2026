@@ -18,7 +18,7 @@ Default CSV sources live in `import.edn`: routes use the configured GitHub URL, 
 
 The importer creates shared city entities using the route codes (`MOW`, `AER`, etc.), links each route to its origin and destination cities, and imports forecasts. There is no demo/root entity. Re-importing creates new forecast entities; it is not a forecast replacement operation.
 
-Evaluate `(integrant.repl/go)` again, then open `http://localhost:3000/`. Select Москва → Сочи, choose an available date, and enter a ticket price. For `seasonal_forecast.csv`, June 1 at `10000` gives 900 seats and 634 predicted sales; other imported forecasts can differ. Only five outbound routes from Moscow are provided. The date selector offers only dates present in the selected route's forecasts; direct submissions of unavailable city pairs or dates still display an error.
+Evaluate `(integrant.repl/go)` again, then open `http://localhost:3000/` and register an account. Select Москва → Сочи, choose an available date, and enter a ticket price. For `seasonal_forecast.csv`, June 1 at `10000` gives 900 seats and 634 predicted sales; other imported forecasts can differ. Only five outbound routes from Moscow are provided. The date selector offers only dates present in the selected route's forecasts; direct submissions of unavailable city pairs or dates still display an error.
 
 ### Styles
 
@@ -65,7 +65,7 @@ demand = median demand - price sensitivity * (ticket price - base price)
 sales  = min(seats, max(0, demand))
 ```
 
-The scenario uses median (`q50`) demand, preserving raw demand and clamping sales only. It does not calculate profit or enforce route price bounds. Only the interactive calculator loads the chart module, which imports the combined Datastar + Rocket bundle pinned to v1.0.5 from jsDelivr; there is no separate Datastar script. Read-only city and route pages use native links and load no JavaScript, so their navigation does not wait on the chart module or its CDN.
+The scenario uses median (`q50`) demand, preserving raw demand and clamping sales only. It does not calculate profit or enforce route price bounds. Only the interactive calculator loads the chart module, which imports the combined Datastar + Rocket bundle pinned to v1.0.5 from jsDelivr. Other pages load Datastar without the chart for account mutations.
 
 ### Demand chart
 
@@ -77,10 +77,28 @@ The scenario uses median (`q50`) demand, preserving raw demand and clamping sale
 ## Checks
 
 ```sh
-clojure -M:test -e "(require 'clojure.test 'app.resolvers.scenario-test) (let [r (clojure.test/run-tests 'app.resolvers.scenario-test)] (System/exit (+ (:fail r) (:error r))))"
+clojure -M:test -e "(require 'clojure.test 'app.user-test 'app.mutations.user-test 'app.acl-test 'app.resolvers.scenario-test) (let [r (clojure.test/run-tests 'app.user-test 'app.mutations.user-test 'app.acl-test 'app.resolvers.scenario-test)] (System/exit (+ (:fail r) (:error r))))"
 bb -cp .:test -e "(require 'import-csv-test) (let [r (clojure.test/run-tests 'import-csv-test)] (System/exit (+ (:fail r) (:error r))))"
 ```
 
 AI assistance: OpenAI Codex (`gpt-6.1-sol`) through omp.
 
-Local demo only: the configured fixed admin subject is shared by requests. Configure authentication and an operation-access policy before hosting; optional registration and hosting are not implemented.
+## Accounts and permissions
+
+`/login`, `/register`, and `/account` use `page/defpage`, just like the calculator and route pages. Registration cities come from the public `:user/registration-cities` root resolver. Reads live in `app.resolvers.user`; login, registration, and logout are `app.mutations.user` mutations on the single `/eql`. There is no auth entity, accounts component, or auth-specific endpoint. `:user/password-hash` is declared in `user.edn` with `:readable? false` and `:editable? false`: its DB schema is generated, but graph reads, fields, and generic writes cannot expose or change it. Buddy Hashers derives salted PBKDF2-SHA256 at 600,000 iterations; existing hashes from the earlier encoding remain verifiable. Concurrent duplicate registrations cannot overwrite users.
+
+User EDN declares separate `:user/>login-form`, `:user/>register-form`, and persistent `:user/>form` resolvers. Login/register pages seed a temporary string `:user/id` and empty email for field rendering only; they do not create a database entity. `/account` uses the session's real ID and resolves its email through the protected stored-data resolver. Generated `:user/>email`, `:user/>password`, and option-backed `:user/>cities` fields compose the forms. The password field renderer never echoes a value; registration only adjusts the generated control's new-password autocomplete and length hint. `:user/password` and demo `:user/cities` are attribute-level `:stored? false`, excluded from DB schema, generated reads, and generic writes. There are no explicit password-view resolvers, manual password-hash schema transactions, or form-mode attribute.
+
+User mutations return `:user/authenticated?`, `:user/errors`, and the user identity on successful login/registration. They neither import views nor return Hiccup/view attributes. The caller requests `:user/>auth-result` in the mutation return join. Its EDN declaration supplies `:in [:user/authenticated? :user/errors]`, `:entity-input? false`, and `:scriptorium/public? true`: anonymous failures render from transient result data without an invented user identity or persisted feedback fields.
+
+Operation authorization is default-deny, including for authenticated callers: unannotated or conflicting policies are forbidden. `:scriptorium/public?` is Scriptorium's explicit anonymous-operation exception, not an EACL library key or stored grant. Login, registration, registration-city options, and public form/feedback rendering use it; their stored-data dependencies still require authorization. Field property `:>public?` applies only to the generated view, never its stored scalar. Generated entity reads/views retain their normal `view` policy; generic graph writes retain `transact`. Scenario EDN declares `:eacl/resource :app.acl/subject-resource`, applied during generation to its derived and field operations. No application component scans or rewrites generated resolver metadata.
+
+Registration offers demo-only self-selected city permissions. A route is granted only when both endpoint cities are selected. Grants are native EACL `viewer` relationships, not persisted `:user/routes` or `:user/cities` attributes. Route access propagates to its cities and forecasts through existing domain references. Scriptorium reconciles only domain-derived relationships, leaving explicit grants intact. Options and city route lists filter unauthorized routes before resolving children; generic graph writes cannot assign permissions.
+
+City pickers and city-page route lists obtain authorized route IDs through paginated EACL `lookup-resources`, then constrain Datalog with a collection input. Picker queries also enforce directional connectivity and the opposite city selection; they return city identities only, leaving names to Pathom joins. Native `with-snapshot` keeps authorization lookup and domain reads on the same immutable snapshot. `scriptorium.eacl/lookup-resource-ids` only collects pages for its supplied query, without hardcoding a resource type or permission. Normal operation-level ACL enforcement remains enabled. Scenario mutations authorize the selected route before returning, regardless of the requested return projection.
+
+Ordinary Ring `wrap-session` owns server-side memory sessions and cookies. Sessions rotate on login/registration and are revoked on logout. Cookies are HttpOnly, SameSite=Lax, and Secure for HTTPS requests. Sessions expire when the component/JVM restarts; users persist. Thin HTTP middleware supplies the authenticated ACL subject, rejects unsafe requests without an exact matching Origin, and marks dynamic responses no-store. Behind an HTTPS proxy, ensure Ring receives the correct trusted request scheme.
+
+Mutations attach server-only response transformations with `scriptorium.reitit.eql/augment-response`, following Fulcro's response augmentation model. The shared endpoint applies them only after the complete query succeeds and returns an ordinary finite SSE Ring response, so standard session middleware can set cookies before headers are sent. Session state is not graph output; there are no request-local session callbacks or manual session finalizers. Virtual `scenario/current` uses the authenticated user's ACL resource, while selected route/forecast data retains its own authorization.
+
+Demo scope: self-assigned grants are not administrator-controlled authorization. No password recovery, email verification, rate limiting, persistent session store, or deployment setup is included. User creation and grant assignment are separate writes: a grant failure leaves a registered user without grants and does not issue a session.

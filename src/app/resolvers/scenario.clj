@@ -1,5 +1,6 @@
 (ns app.resolvers.scenario
-  (:require [datahike.api :as d]))
+  (:require [app.acl :as acl]
+            [datahike.api :as d]))
 
 (defn- unique-match [matches]
   (when (next matches)
@@ -8,22 +9,27 @@
 
 (defn route-selection
   [{:scriptorium.datahike/keys [env->db] :as env} {:scenario/keys [from to]}]
-  (unique-match
-   (d/q '[:find [(pull ?route [:route/id]) ...]
-          :in $ ?from ?to
-          :where [?origin :city/id ?from] [?destination :city/id ?to]
-          [?route :route/origin-city ?origin] [?route :route/destination-city ?destination]]
-        (env->db env) (:city/id from) (:city/id to))))
+  (when-let [route
+             (unique-match
+              (d/q '[:find [(pull ?route [:route/id]) ...]
+                     :in $ ?from ?to
+                     :where [?origin :city/id ?from] [?destination :city/id ?to]
+                     [?route :route/origin-city ?origin] [?route :route/destination-city ?destination]]
+                   (env->db env) (:city/id from) (:city/id to)))]
+    (acl/require-view! env route)))
 
 (defn forecast-selection
   [{:scriptorium.datahike/keys [env->db] :as env} {:scenario/keys [date route]}]
   (when route
-    (unique-match
-     (d/q '[:find [(pull ?forecast [:forecast/id]) ...]
-            :in $ ?route-id ?date
-            :where [?route :route/id ?route-id]
-            [?route :route/forecasts ?forecast] [?forecast :forecast/date ?date]]
-          (env->db env) (:route/id route) (str date)))))
+    (acl/require-view! env route)
+    (when-let [forecast
+               (unique-match
+                (d/q '[:find [(pull ?forecast [:forecast/id]) ...]
+                       :in $ ?route-id ?date
+                       :where [?route :route/id ?route-id]
+                       [?route :route/forecasts ?forecast] [?forecast :forecast/date ?date]]
+                     (env->db env) (:route/id route) (str date)))]
+      (acl/require-view! env forecast))))
 
 (defn- demand-at-price [baseline base-price sensitivity price]
   (- baseline (* sensitivity (- price base-price))))

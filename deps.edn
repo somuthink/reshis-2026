@@ -3,10 +3,11 @@
  :deps {org.clojure/clojure {:mvn/version "1.12.4"}
         integrant/integrant {:mvn/version "1.0.1"}
         aero/aero {:mvn/version "1.1.6"}
-        com.somuthink/scriptorium {:local/root "../../scriptorium"}}
+        com.somuthink/scriptorium {:local/root "../../scriptorium"}
+        buddy/buddy-hashers {:mvn/version "2.0.167"}}
 
  :aliases {:dev {:extra-paths ["dev"]
                  :extra-deps {integrant/repl {:mvn/version "0.5.1"}
                               nrepl/nrepl {:mvn/version "1.7.0"}}
                  :main-opts ["-m" "nrepl.cmdline" "--port" "9000" "--interactive"]}
-        :test {:extra-paths ["test"]}}}
+           :test {:extra-paths ["test"]}}}

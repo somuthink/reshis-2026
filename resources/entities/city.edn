@@ -1,9 +1,11 @@
 [:map
  [:city/id {:identity? true} :string]
  [:city/name :string]
- [:city/outgoing-routes {:where [[?r :route/origin-city ?e]]}
+ [:city/outgoing-routes {:resolve :app.resolvers.city/outgoing-routes
+                         :in [:city/id]}
   [:vector [:s/ref :route/id]]]
- [:city/incoming-routes {:where [[?r :route/destination-city ?e]]}
+ [:city/incoming-routes {:resolve :app.resolvers.city/incoming-routes
+                         :in [:city/id]}
   [:vector [:s/ref :route/id]]]
  [:city/>link {:resolve :app.views.city/link
                :in [:city/id :city/name]}

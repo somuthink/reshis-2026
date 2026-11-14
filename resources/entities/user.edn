@@ -1,0 +1,20 @@
+[:map
+ [:user/id {:identity? true} :string]
+ [:user/email {:editable? false :db/unique :db.unique/value
+               :ui/type "email" :ui/attrs {:autocomplete "username" :maxlength 254}
+               :>public? true} :string]
+ [:user/password {:stored? false :>style :password :>public? true
+                  :ui/type "password" :ui/attrs {:maxlength 256 :autocomplete "current-password"}} :string]
+ [:user/password-hash {:readable? false :editable? false} :string]
+ [:user/cities {:stored? false :optional true :>public? true :ui/attrs {:aria-describedby "cities-help"}
+                :>in [{:user/registration-cities [:city/id :city/name]}]
+                :>options {:source :user/registration-cities :value :city/id :label :city/name
+                           :default-all? true}}
+  [:vector [:s/ref :city/id]]]
+ [:user/>login-form {:scriptorium/public? true :resolve :app.views.user/login-form
+                     :in [:user/email :user/>email :user/>password]} :hiccup]
+ [:user/>register-form {:scriptorium/public? true :resolve :app.views.user/register-form
+                        :in [:user/email :user/>email :user/>password :user/>cities]} :hiccup]
+ [:user/>form {:resolve :app.views.user/form :in [:user/email :user/>email]} :hiccup]
+ [:user/>auth-result {:editable? false :entity-input? false :scriptorium/public? true
+                      :resolve :app.views.user/result :in [:user/authenticated? :user/errors]} :hiccup]]

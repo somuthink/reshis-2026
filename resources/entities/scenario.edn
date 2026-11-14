@@ -1,4 +1,4 @@
-[:map {:stored? false}
+[:map {:stored? false :eacl/resource :app.acl/subject-resource}
  [:scenario/id {:identity? true} :string]
  [:scenario/from {:>in [:route/origin-cities]
                   :>options {:source :route/origin-cities :value :city/id :label :city/name}} [:s/ref :city/id]]
@@ -26,14 +26,14 @@
   {:resolve :app.resolvers.scenario/estimate
    :in [:scenario/date :scenario/price
         {:scenario/from [:city/id]} {:scenario/to [:city/id]}
-        {:scenario/route [:route/name :route/base-price :route/price-sensitivity]}
-        {:scenario/forecast [:forecast/seats :forecast/demand-q50]}]}
+        {:scenario/route [:route/id :route/name :route/base-price :route/price-sensitivity]}
+        {:scenario/forecast [:forecast/id :forecast/seats :forecast/demand-q50]}]}
   :any]
  [:scenario/distribution
   {:resolve :app.resolvers.scenario/distribution
    :in [:scenario/price
-        {:scenario/route [:route/base-price :route/price-sensitivity]}
-        {:scenario/forecast [:forecast/demand-q10 :forecast/demand-q20
+        {:scenario/route [:route/id :route/base-price :route/price-sensitivity]}
+        {:scenario/forecast [:forecast/id :forecast/demand-q10 :forecast/demand-q20
                              :forecast/demand-q30 :forecast/demand-q40
                              :forecast/demand-q50 :forecast/demand-q60
                              :forecast/demand-q70 :forecast/demand-q80

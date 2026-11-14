@@ -1,4 +1,31 @@
-(ns app.views.page)
+(ns app.views.page
+  (:require [dev.onionpancakes.chassis.core :as c]
+            [scriptorium.datastar :as ds]))
+
+(defn document [request content interactive?]
+  (c/html
+   [:html {:lang "ru"}
+    [:head
+     [:meta {:charset "utf-8"}]
+     [:meta {:name "viewport" :content "width=device-width, initial-scale=1"}]
+     [:title "Прогноз продаж авиабилетов"]
+     [:script {:type "module"
+               :src (if interactive?
+                      "/js/demand-chart.js?v=rocket"
+                      "https://cdn.jsdelivr.net/gh/starfederation/datastar@v1.0.5/bundles/datastar.js")}]
+     [:link {:rel "stylesheet" :href "/css/app.css"}]]
+    [:body
+     (when-let [email (get-in request [:identity :user/email])]
+       [:nav {:aria-label "Аккаунт"
+              :class "mx-auto flex w-full max-w-5xl flex-wrap items-center justify-end gap-4 px-4 pt-4 text-sm text-white sm:px-8"}
+        [:a {:href "/account" :class "underline underline-offset-4"} email]
+        [:button (merge {:type "button"
+                         :class "rounded-lg border border-white/40 px-3 py-2 hover:bg-white/10 focus-visible:outline-2"}
+                        (ds/on :click
+                               [{(list 'app.mutations.user/logout {}) [:user/>auth-result]}] {}))
+         "Выйти"]
+        [:div {:id "auth-result" :role "alert"}]])
+     content]]))
 
 (defn entity [title content]
   [:main {:class "mx-auto w-full max-w-5xl px-4 pb-8 sm:px-8"}
