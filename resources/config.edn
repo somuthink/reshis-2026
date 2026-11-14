@@ -29,7 +29,7 @@
 
  :scriptorium.datahike/conn
  {:store {:backend :file
-          :path "data/routes-db"
+          :path #or [#env DATABASE_PATH "data/routes-db"]
           :id #uuid "f67b64bd-57bb-49fb-a998-3b28530bb800"}
   :schema-flexibility :write}
 
@@ -37,5 +37,5 @@
  {:routes ["" #include "routes/routes.edn"]}
 
  :scriptorium.http-kit/server
- {:port #or [#env PORT 3000]
+ {:port #long #or [#env PORT 3000]
   :handler #ig/ref :app.reitit.middleware/handler}}

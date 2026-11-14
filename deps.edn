@@ -10,4 +10,7 @@
                  :extra-deps {integrant/repl {:mvn/version "0.5.1"}
                               nrepl/nrepl {:mvn/version "1.7.0"}}
                  :main-opts ["-m" "nrepl.cmdline" "--port" "9000" "--interactive"]}
+           :build {:deps {io.github.clojure/tools.build {:git/tag "v0.10.6"
+                                                         :git/sha "5b6cd2e15a5726fb2d2463e2ac8cf8ba545d6b43"}}
+                   :ns-default build}
            :test {:extra-paths ["test"]}}}
