@@ -124,7 +124,7 @@
                                :data-init (str "if (!" values ".includes(" signal ")) " signal " = ''")
                                :data-effect (str "el.value = " signal "; el.setCustomValidity(!" signal " || "
                                                  values ".includes(" signal ") ? '' : 'Для этой даты нет прогноза')")
-                               :data-on:change "el.reportValidity()")]]
+                               :data-on:change "el.reportValidity(); el.dispatchEvent(new Event('input', {bubbles: true}))")]]
     [:div {:class "flex min-w-0 items-center gap-2"}
      (button -1 "Предыдущая доступная дата" "‹" " <= 0")
      (if label
