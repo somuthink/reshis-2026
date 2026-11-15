@@ -47,6 +47,20 @@
     cursor: not-allowed;
   }
 
+  .demand-distribution {
+    --fg: #334155;
+    --muted: #64748b;
+    --border: #dce8f0;
+    --surface: #f8fbfe;
+    --accent: #0284c7;
+    --warning: #b45309;
+  }
+
+  .demand-distribution svg text {
+    fill: var(--fg);
+    font: 14px var(--font-sans);
+  }
+
   .clay-panel {
     border: 1px solid #c1d9e8;
     border-top-color: #fff;

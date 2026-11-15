@@ -8,18 +8,18 @@
   {:scenario/id "current"}
   {:status 200
    :headers {"Content-Type" "text/html; charset=utf-8"}
-   :body (layout/document request >form true)})
+   :body (layout/document request >form)})
 
 (page/defpage detail
   [request {:route/keys [>view]}]
   {:route/id (get-in request [:parameters :path :route/id])}
   {:status 200
    :headers {"Content-Type" "text/html; charset=utf-8"}
-   :body (layout/document request >view false)})
+   :body (layout/document request >view)})
 
 (page/defpage city
   [request {:city/keys [>view]}]
   {:city/id (get-in request [:parameters :path :city/id])}
   {:status 200
    :headers {"Content-Type" "text/html; charset=utf-8"}
-   :body (layout/document request >view false)})
+   :body (layout/document request >view)})

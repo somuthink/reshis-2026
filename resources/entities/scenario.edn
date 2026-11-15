@@ -9,14 +9,15 @@
  [:scenario/date
   {:>label "Дата"
    :>style :date
+   :>attrs {:aria-label "Дата вылета"}
    :>in [:route/forecast-dates]
    :>options {:source :route/forecast-dates :value :forecast/date}}
   :time/local-date]
  [:scenario/price
   {:>label "Цена, ₽"
    :>style :slider
-   :>in [{:route/selected [:route/price-min :route/price-max]}]
-   :>options {:source :route/selected :min :route/price-min :max :route/price-max}}
+   :>in [{:route/selected [:route/price-min :route/base-price :route/price-max]}]
+   :>options {:source :route/selected :min :route/price-min :base :route/base-price :max :route/price-max}}
   :double]
  [:scenario/route
   {:resolve :app.resolvers.scenario/route-selection
@@ -43,14 +44,22 @@
                              :forecast/demand-q70 :forecast/demand-q80
                              :forecast/demand-q90]}]}
   :any]
+ [:scenario/>date
+  {:resolve :app.views.fields/date-field
+   :params [:map {:closed true} [:label? {:optional true} :boolean]]
+   :in [(:scenario/date {:com.wsscode.pathom3.connect.operation/optional? true})
+        :route/forecast-dates]}
+  :hiccup]
  [:scenario/>form
   {:resolve :app.views.scenario/form
-   :in [:scenario/>from :scenario/>to :scenario/>date :scenario/>price]}
+   :in [:scenario/>from :scenario/>to (:scenario/>date {:label? false}) :scenario/>price]}
+  :hiccup]
+ [:scenario/>chart
+  {:resolve :app.views.scenario/chart
+   :in [:scenario/distribution :scenario/estimate]}
   :hiccup]
  [:scenario/>result
   {:resolve :app.views.scenario/result
-   :in [:scenario/estimate :scenario/distribution
-        {:scenario/route [:route/id
-                          {:route/origin-city [:city/>link]}
-                          {:route/destination-city [:city/>link]}]}]}
+   :in [:scenario/estimate :scenario/>chart
+        {:scenario/route [:route/>link]}]}
   :hiccup]]

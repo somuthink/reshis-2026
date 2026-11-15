@@ -2,7 +2,7 @@
   (:require [dev.onionpancakes.chassis.core :as c]
             [scriptorium.datastar :as ds]))
 
-(defn document [request content interactive?]
+(defn document [request content]
   (c/html
    [:html {:lang "ru"}
     [:head
@@ -10,9 +10,7 @@
      [:meta {:name "viewport" :content "width=device-width, initial-scale=1"}]
      [:title "Прогноз продаж авиабилетов"]
      [:script {:type "module"
-               :src (if interactive?
-                      "/js/demand-chart.js?v=rocket"
-                      "https://cdn.jsdelivr.net/gh/starfederation/datastar@v1.0.5/bundles/datastar.js")}]
+               :src "https://cdn.jsdelivr.net/gh/starfederation/datastar@v1.0.5/bundles/datastar.js"}]
      [:link {:rel "stylesheet" :href "/css/app.css"}]]
     [:body
      (when-let [email (get-in request [:identity :user/email])]

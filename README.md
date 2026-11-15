@@ -47,6 +47,8 @@ Scriptorium связывает Malli-схемы с Datahike, вычислени�
  [:s/ref :city/id]]
 ```
 
+Форма запрашивает дату как `(:scenario/>date {:label? false})`: `app.views.fields/date-field` читает параметр через `pco/params` и скрывает видимую подпись, сохраняя доступное имя и ограничения дат. Без параметра подпись отображается. Кнопки «Минимум», «Базовая», «Максимум» используют цены выбранного маршрута, синхронизируют поле и ползунок и запускают обычный пересчёт прогноза. Панель управления занимает высоту содержимого; графику отведена более широкая отдельная панель.
+
 На схеме стрелки ведут от данных к вычислениям и представлениям. Многострочные блоки показывают поля вложенных выборок.
 
 ```mermaid
@@ -69,6 +71,8 @@ flowchart LR
   SELECTED_ROUTE --> SELECTED_ID[":route/id"]
   SELECTED_ID --> PRICE_MIN[":route/price-min"]
   SELECTED_ID --> PRICE_MAX[":route/price-max"]
+  SELECTED_ID --> PRICE_BASE[":route/base-price"]
+  PRICE_BASE --> PRICE_VIEW
   PRICE_MIN --> PRICE_VIEW[":scenario/>price"]
   PRICE_MAX --> PRICE_VIEW
   FROM_VIEW --> FORM[":scenario/>form"]
@@ -102,10 +106,11 @@ flowchart LR
   DIST_FORECAST --> DISTRIBUTION
   PRICE --> DISTRIBUTION
   ESTIMATE --> RESULT[":scenario/>result"]
-  DISTRIBUTION --> RESULT
-  ROUTE --> RESULT_ROUTE["Маршрут для результата<br/>:route/id<br/>:route/origin-city → :city/&gt;link<br/>:route/destination-city → :city/&gt;link"]
-  RESULT_ROUTE --> CITY_LINKS["HTML-ссылки на города"]
-  CITY_LINKS --> RESULT
+  DISTRIBUTION --> CHART[":scenario/>chart"]
+  ESTIMATE --> CHART
+  CHART --> RESULT
+  ROUTE --> RESULT_ROUTE["Маршрут для результата<br/>:route/&gt;link"]
+  RESULT_ROUTE --> RESULT
 ```
 
 ### Вложенные страницы маршрута и города
@@ -193,6 +198,8 @@ flowchart LR
 ```
 
 Каждый из девяти квантилей пересчитывается по той же формуле. Медиана графика совпадает со спросом до ограничения числом кресел; вместимость отмечена отдельно. Пересчёт формы выполняется с задержкой 300 мс, отсутствие маршрута или прогноза возвращает ошибку.
+
+`:scenario/>chart` получает распределение и оценку через `:in` и возвращает Hiccup: компактную шкалу центральных 80% прогноза и график вероятности превышения спроса. Обе части используют общую шкалу спроса и отметку вместимости. `:scenario/>result` включает готовое представление графика, крупный прогноз продаж и ссылку на маршрут. SVG обновляется вместе с результатом через Datastar; отдельная браузерная библиотека графиков не нужна. Таблица девяти квантилей доступна программам чтения с экрана.
 
 Пароли хранятся в виде PBKDF2-SHA256-хэшей; права на маршруты проверяются сервером.
 

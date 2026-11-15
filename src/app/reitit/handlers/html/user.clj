@@ -8,7 +8,7 @@
 
 (defn- render [request form]
   {:status 200 :headers {"Content-Type" "text/html; charset=utf-8"}
-   :body (layout/document request form false)})
+   :body (layout/document request form)})
 
 (page/defpage login
   [request {:user/keys [>login-form]}]
