@@ -1,5 +1,6 @@
 (ns app.resolvers.scenario
   (:require [app.acl :as acl]
+            [com.wsscode.pathom3.connect.operation :as pco]
             [datahike.api :as d]))
 
 (defn- unique-match [matches]
@@ -38,6 +39,21 @@
   [median-demand seats base-price sensitivity price]
   (let [demand (demand-at-price median-demand base-price sensitivity price)]
     {:demand demand :sales (min (double seats) (max 0.0 demand))}))
+
+(defn target-price
+  [env {:scenario/keys [estimate route]}]
+  (let [target (:target (pco/params env))
+        {:keys [error seats median-demand]} estimate
+        {:route/keys [base-price price-sensitivity price-min price-max]} route]
+    (cond
+      error {:error error}
+      (or (<= target 0) (> target seats)) {:error (str "Укажите число пассажиров от 1 до " seats ".")}
+      (not (pos? price-sensitivity)) {:error "Нельзя подобрать цену при нулевой чувствительности спроса."}
+      :else
+      (let [price (+ base-price (/ (- median-demand target) price-sensitivity))]
+        (if (<= price-min price price-max)
+          {:price price}
+          {:error "Цель недостижима в диапазоне цен маршрута."})))))
 
 (defn distribution
   [{:scenario/keys [price route forecast]}]

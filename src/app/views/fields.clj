@@ -71,7 +71,9 @@
 (defmethod ui/render-field [:double :default]
   [_registry attribute value _ {:keys [label] :as field-options}]
   (let [control [:input (assoc (attributes field-options attribute)
-                               :type "number" :step "any" :value (or value ""))]]
+                               :type "number" :step "any" :value (or value "")
+                               :data-signals__ifmissing (str "{" (name attribute) ": " (or value 0) "}")
+                               :data-effect (str "el.setAttribute('value', $" (name attribute) ")"))]]
     (if label [:label {:class "block font-medium text-slate-800"} label control] control)))
 
 (defmethod ui/render-field [:double :slider]
@@ -98,7 +100,7 @@
           [:button {:type "button"
                     :class "min-w-0 rounded-xl border border-sky-200 px-2 py-3 text-sky-950 hover:bg-sky-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sky-600 aria-pressed:border-sky-700 aria-pressed:bg-sky-50"
                     :data-attr:aria-pressed (str signal " === " price " ? 'true' : 'false'")
-                    :data-on:click (str signal " = " price)}
+                    :data-on:click (str signal " = " price "; el.dispatchEvent(new Event('input', {bubbles: true}))")}
            [:span {:class "block text-sm text-slate-600"} label]
            [:span {:class "mt-1 block text-xl font-semibold tabular-nums"} (format "%.0f" price)]])])]))
 
@@ -113,7 +115,7 @@
                  [:button {:type "button" :aria-label aria-label :disabled true
                            :class "field-control" :style "width:2.5rem;flex:0 0 2.5rem;padding:0"
                            :data-attr:disabled (str index " < 0 || " index boundary)
-                           :data-on:click (str signal " = " values "[" index " + (" step ")]")}
+                           :data-on:click (str signal " = " values "[" index " + (" step ")]; el.dispatchEvent(new Event('input', {bubbles: true}))")}
                   glyph])
         control [:input (assoc (attributes field-options attribute)
                                :type "date" :value (some-> value str)

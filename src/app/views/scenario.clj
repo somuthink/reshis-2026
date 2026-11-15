@@ -92,9 +92,8 @@
    [:div {:class "grid grid-cols-1 items-start gap-6 lg:grid-cols-[minmax(0,2fr)_minmax(0,3fr)]"}
     [:form {:class "clay-panel grid min-w-0 content-start gap-5 p-5 sm:p-8"
             :data-on:submit "evt.preventDefault()"
-            :data-on-signal-patch-filter "{include: /^(from|to|date|price)$/}"
-            :data-on-signal-patch__debounce.300ms
-            (str "el.checkValidity() && $from && $to && $date ? "
+            :data-on:input__debounce.300ms
+            (str "evt.target.name !== 'scenario/target' && el.checkValidity() && $from && $to && $date ? "
                  (get (ds/on :change
                              [{(list 'app.mutations.scenario/evaluate {:from '$from :to '$to :date '$date :price '$price})
                                [:scenario/>result]}] {})
@@ -111,7 +110,19 @@
       [:div {:class "grid min-w-0 gap-1.5"} >to]]
      [:div {:class "grid gap-4"}
       [:div {:class "grid min-w-0 gap-1.5"} >date]
-      [:div {:class "grid min-w-0 gap-1.5"} >price]]]
+      [:div {:class "grid min-w-0 gap-1.5"} >price]]
+     [:fieldset {:class "grid gap-3 border-t border-sky-100 pt-5" :data-signals "{target: 1}"}
+      [:legend {:class "text-lg font-medium text-sky-950"} "Подобрать цену"]
+      [:label {:class "grid gap-2 text-slate-700"}
+       "Продажи по медиане, пассажиров"
+       [:input {:type "number" :name "scenario/target" :min 1 :step 1 :class "field-control" :data-bind "target"}]]
+      [:button (merge {:type "button"
+                       :class "rounded-xl bg-sky-700 px-4 py-3 text-lg text-white hover:bg-sky-800 focus-visible:outline-2"
+                       :data-attr:disabled "!$from || !$to || !$date || !Number.isInteger($target) || $target < 1"}
+                      (ds/on :click
+                             [{(list 'app.mutations.scenario/set-target-sales {:from '$from :to '$to :date '$date :price '$price :target '$target})
+                               [:scenario/>price :scenario/>result]}] {}))
+       "Рассчитать цену"]]]
     [:section {:class "clay-panel min-w-0 p-5 sm:p-8"
                :id (ui/view-id :scenario/>result id) :aria-live "polite"}
      [:h2 {:class "text-base text-slate-500"} "Прогноз продаж"]

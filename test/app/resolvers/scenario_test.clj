@@ -92,6 +92,7 @@
        [{:route/id "MOW-AER" :route/name "MOW → AER"
          :route/origin-city [:city/id "MOW"] :route/destination-city [:city/id "AER"]
          :route/base-price 9000.0 :route/price-sensitivity 0.141
+         :route/price-min 5400.0 :route/price-max 18000.0
          :route/forecasts [{:forecast/id forecast-id :forecast/date "2026-12-01"
                             :forecast/seats 900 :forecast/demand-q50 775.0}
                            {:forecast/id (random-uuid) :forecast/date "2026-12-03"}]}
@@ -115,7 +116,7 @@
                         :scriptorium.eacl/subject (acl/resource registry {:user/id "scenario-test"})
                         :com.wsscode.pathom3.error/lenient-mode? false}
                   :plugins [(acl.pathom/plugin {:client client})]
-                  :resolvers [scenario/evaluate route/origin-cities route/destination-cities route/forecast-dates
+                  :resolvers [scenario/evaluate scenario/set-target-sales route/origin-cities route/destination-cities route/forecast-dates
                               (views/resolvers {:registry registry})
                               (stored/resolvers {:registry registry})]})
             cities (fn [attribute params]
@@ -235,6 +236,18 @@
                  (estimate (assoc params :date "2026-12-02"))))
           (is (= {:error "No route exists from AER to LED."}
                  (estimate (assoc params :from "AER" :to "LED")))))
+        (testing "target mutation returns the new price and matching forecast in one result"
+          (let [run #(get (p.eql/process env {}
+                                         [{(list 'app.mutations.scenario/set-target-sales (assoc params :target %))
+                                           [:scenario/price :scenario/estimate {:route/selected [:route/id]}]}])
+                          'app.mutations.scenario/set-target-sales)
+                result (run 700)
+                failed (run 901)]
+            (is (< (Math/abs (- 700.0 (get-in result [:scenario/estimate :demand]))) 1e-8))
+            (is (= (:scenario/price result) (get-in result [:scenario/estimate :price])))
+            (is (= {:route/id "MOW-AER"} (:route/selected result)))
+            (is (= 10000.0 (:scenario/price failed)))
+            (is (contains? (:scenario/estimate failed) :error))))
         (testing "whole-number prices work and invalid parameters are rejected"
           (is (= 634.0 (:sales (estimate (assoc params :price 10000)))))
           (doseq [invalid [(dissoc params :from) (assoc params :to "")

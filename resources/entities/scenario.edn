@@ -58,6 +58,12 @@
   {:resolve :app.views.scenario/chart
    :in [:scenario/distribution :scenario/estimate]}
   :hiccup]
+ [:scenario/target-price
+  {:resolve :app.resolvers.scenario/target-price
+   :params [:map {:closed true} [:target [:int {:min 1}]]]
+   :in [:scenario/estimate
+        {:scenario/route [:route/base-price :route/price-sensitivity :route/price-min :route/price-max]}]}
+  :any]
  [:scenario/>result
   {:resolve :app.views.scenario/result
    :in [:scenario/estimate :scenario/>chart
