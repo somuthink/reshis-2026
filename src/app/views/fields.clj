@@ -1,5 +1,6 @@
 (ns app.views.fields
   (:require [clojure.string :as str]
+            [com.wsscode.pathom3.connect.operation :as pco]
             [jsonista.core :as json]
             [scriptorium.pathom.ui :as ui]))
 
@@ -90,9 +91,16 @@
                                 "; el.value = " signal)
               :data-on:input (str signal " = Number(el.value)")}]
      (when bounds
-       [:div {:class "flex justify-between text-sm text-slate-500 tabular-nums"}
-        [:span (format "%.0f" minimum)]
-        [:span (format "%.0f" maximum)]])]))
+       [:div {:class "mt-3 grid grid-cols-3 gap-2"}
+        (for [[label price] [["Минимум" minimum]
+                             ["Базовая" (get bounds (:base options))]
+                             ["Максимум" maximum]]]
+          [:button {:type "button"
+                    :class "min-w-0 rounded-xl border border-sky-200 px-2 py-3 text-sky-950 hover:bg-sky-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sky-600 aria-pressed:border-sky-700 aria-pressed:bg-sky-50"
+                    :data-attr:aria-pressed (str signal " === " price " ? 'true' : 'false'")
+                    :data-on:click (str signal " = " price)}
+           [:span {:class "block text-sm text-slate-600"} label]
+           [:span {:class "mt-1 block text-xl font-semibold tabular-nums"} (format "%.0f" price)]])])]))
 
 (defmethod ui/render-field [:time/local-date :date]
   [_registry attribute value input {:keys [options disabled? label] :as field-options}]
@@ -121,3 +129,9 @@
        [:label {:class "grid gap-1 font-medium text-slate-800"} label control]
        control)
      (button 1 "Следующая доступная дата" "›" (str " >= " (dec (count dates))))]))
+
+(defn date-field
+  [env {:scriptorium/keys [registry] :scenario/keys [date] :as input}]
+  (ui/render-field registry :scenario/date date input
+                   (cond-> (ui/field-options registry :scenario/date date)
+                     (false? (:label? (pco/params env))) (assoc :label nil))))

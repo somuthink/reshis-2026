@@ -191,6 +191,18 @@
                   invalid [{parameter nil} {parameter 123} {parameter []}
                            {:unknown "MOW"}]]
             (is (thrown? clojure.lang.ExceptionInfo (cities attribute invalid)))))
+        (testing "date label parameters preserve an accessible, constrained date input"
+          (let [input (assoc seed :route/forecast-dates [{:forecast/date "2026-12-01"}])
+                render #(get (p.eql/process env input [(list :scenario/>date %)]) :scenario/>date)
+                nodes #(filter vector? (tree-seq coll? seq %))
+                labeled (render {})
+                hidden (render {:label? false})
+                control (second (first (filter #(= :input (first %)) (nodes hidden))))]
+            (is (some #(= :label (first %)) (nodes labeled)))
+            (is (not-any? #(= :label (first %)) (nodes hidden)))
+            (is (= "2026-12-01" (:value control) (:min control) (:max control)))
+            (is (and (:required control) (not (:disabled control)) (:aria-label control)))
+            (is (thrown? clojure.lang.ExceptionInfo (render {:label? []})))))
         (testing "the virtual scenario exposes singular references and fully joined data"
           (is (= {:scenario/id "current"
                   :scenario/from {:city/id "MOW" :city/name "Москва"}
