@@ -1,9 +1,10 @@
 (ns app.views.scenario
-  (:require [scriptorium.datastar :as ds]
+  (:require [jsonista.core :as json]
+            [scriptorium.datastar :as ds]
             [scriptorium.pathom.ui :as ui]))
 
 (defn chart
-  [{:scenario/keys [distribution estimate]}]
+  [{:scenario/keys [id distribution estimate]}]
   (let [{:keys [error seats]} estimate]
     (when (and (not error) (seq distribution))
       (let [demands (mapv :demand distribution)
@@ -11,7 +12,6 @@
             high (max seats (peek demands))
             span (max 1.0 (- high low))
             x (fn [demand] (+ 200 (* 250 (/ (- demand (+ low (/ (- high low) 2))) span))))
-            y (fn [quantile] (+ 180 (* 170 quantile)))
             median (:demand (nth distribution 4))]
         [:figure {:class "demand-distribution"}
          [:dl {:class "grid grid-cols-3 gap-2 text-sky-950 tabular-nums"}
@@ -21,12 +21,11 @@
               label [:span {:class "sr-only"} (str ", квантиль " (* 10 (inc index)) "%")]]
              [:dd {:class "mt-1 text-2xl font-semibold tracking-tight sm:text-3xl"}
               (format "%.2f" (nth demands index))]])]
-         [:svg {:viewBox "0 0 400 395" :class "mt-4 block w-full" :role "img"
+         [:svg {:viewBox "0 0 400 130" :class "mt-4 block w-full" :role "img"
                 :aria-label (str "Спрос: центральные 80% от " (format "%.2f" (first demands))
                                  " до " (format "%.2f" (peek demands))
-                                 ". Медиана " (format "%.2f" median) ". Мест: " seats
-                                 ". Нижний график: вероятность спроса выше отметки.")}
-          [:rect {:x (x seats) :y 44 :width (- 355 (x seats)) :height 306 :fill "var(--warning)" :opacity 0.07}]
+                                 ". Медиана " (format "%.2f" median) ". Мест: " seats ".")}
+          [:rect {:x (x seats) :y 44 :width (- 355 (x seats)) :height 55 :fill "var(--warning)" :opacity 0.07}]
           (for [[left right] (partition 2 1 demands)]
             [:rect {:x (x left) :y 55 :width (- (x right) (x left)) :height 30
                     :fill "var(--accent)" :opacity 0.65 :stroke "var(--surface)"}
@@ -35,24 +34,17 @@
             [:line {:x1 (x demand) :x2 (x demand) :y1 55 :y2 85 :stroke "var(--surface)"}])
           [:line {:x1 (x median) :x2 (x median) :y1 48 :y2 92 :stroke "var(--warning)" :stroke-width 4}]
           [:text {:x 200 :y 120 :text-anchor "middle"} "Каждый сегмент — 10% вероятности"]
-          (for [probability [0 50 100]
-                :let [py (- 350 (* 1.7 probability))]]
-            [:g
-             [:line {:x1 60 :x2 340 :y1 py :y2 py :stroke "var(--border)"}]
-             [:text {:x 48 :y (+ py 5) :text-anchor "end"} (str probability "%")]])
-          (for [{:keys [quantile demand]} distribution]
-            [:circle {:cx (x demand) :cy (y quantile) :r (if (= quantile 0.5) 7 5)
-                      :fill (if (= quantile 0.5) "var(--warning)" "var(--accent)")
-                      :stroke "var(--surface)" :stroke-width 2}
-             [:title (str (Math/round (* 100 (- 1.0 quantile))) "%: спрос выше " (format "%.2f" demand))]])
-          (for [[top bottom] [[32 99] [171 350]]]
-            [:line {:class "capacity" :x1 (x seats) :x2 (x seats) :y1 top :y2 bottom
-                    :stroke "var(--fg)" :stroke-width 1.5 :stroke-dasharray "4 4"}])
+          [:line {:class "capacity" :x1 (x seats) :x2 (x seats) :y1 32 :y2 99
+                  :stroke "var(--fg)" :stroke-width 1.5 :stroke-dasharray "4 4"}]
           [:text {:x (x seats) :y 23 :text-anchor (if (> (x seats) 240) "end" "start")
-                  :class "font-semibold"} (str seats " мест")]
-          (for [tick (distinct [low (+ low (/ (- high low) 2)) high])]
-            [:text {:x (x tick) :y 374 :text-anchor "middle"} (format (if (< span 10) "%.2f" "%.0f") (double tick))])
-          [:text {:x 200 :y 394 :text-anchor "middle"} "Спрос, чел."]]
+                  :class "font-semibold"} (str seats " мест")]]
+         [:exceedance-chart {:id (str "exceedance-chart-" id)
+                             :points (json/write-value-as-string distribution)
+                             :capacity seats
+                             :domain (json/write-value-as-string
+                                      (let [middle (+ low (/ (- high low) 2))]
+                                        [(- middle (* 0.56 span)) (+ middle (* 0.56 span))]))
+                             :aria-label "Вероятность превышения спроса. Стрелки выбирают точку, Escape закрывает подсказку."}]
          [:table {:class "sr-only"}
           [:thead [:tr [:th {:scope "col"} "Квантиль"] [:th {:scope "col"} "Спрос"]
                    [:th {:scope "col"} "Вероятность большего спроса"]]]

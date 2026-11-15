@@ -10,7 +10,7 @@
      [:meta {:name "viewport" :content "width=device-width, initial-scale=1"}]
      [:title "Прогноз продаж авиабилетов"]
      [:script {:type "module"
-               :src "https://cdn.jsdelivr.net/gh/starfederation/datastar@v1.0.5/bundles/datastar.js"}]
+               :src "/js/exceedance-chart.js"}]
      [:link {:rel "stylesheet" :href "/css/app.css"}]]
     [:body
      (when-let [email (get-in request [:identity :user/email])]
